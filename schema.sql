@@ -226,7 +226,7 @@ CREATE TABLE Pay_slips (
 -- ####################################
 
 CREATE TRIGGER Owns_insert_trigger
-BEFORE INSERT OR UPDATE ON Buys
+BEFORE INSERT ON Buys
 FOR EACH ROW EXECUTE FUNCTION check_for_owns_insert();
 
 CREATE OR REPLACE FUNCTION check_for_owns_insert() RETURNS TRIGGER AS $$
@@ -276,6 +276,42 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE TRIGGER Owns_update_trigger
+BEFORE UPDATE ON Buys
+FOR EACH ROW EXECUTE FUNCTION check_for_owns_update();
+
+CREATE OR REPLACE FUNCTION check_for_owns_update() RETURNS TRIGGER AS $$
+BEGIN
+
+    IF (NEW.cust_id <> OLD.cust_id) THEN
+        RAISE EXCEPTION 'Cannot change customer/owner';
+        RETURN NULL;
+    END IF;
+
+    IF (NEW.number <> OLD.number) THEN
+        RAISE EXCEPTION 'Cannot change card';
+        RETURN NULL;
+    END IF;
+
+    IF (NEW.package_id <> OLD.package_id) THEN
+        RAISE EXCEPTION 'Cannot change package';
+        RETURN NULL;
+    END IF;
+
+    IF (NEW.buy_date <> OLD.buy_date) THEN
+        RAISE EXCEPTION 'Buy date should not be updated';
+        RETURN NULL;
+    END IF;
+
+    IF (NEW.num_remaining_redemptions > (SELECT num_free_registrations FROM Course_packages cp WHERE NEW.package_id = cp.package_id)) THEN
+        RAISE EXCEPTION 'Number of remaining redemption must be <= initial';
+        RETURN NULL;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE TRIGGER Owns_check_active
 BEFORE INSERT ON Buys
 FOR EACH ROW EXECUTE FUNCTION check_for_active_package();
@@ -309,13 +345,29 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER Offerings_insert_trigger
-BEFORE INSERT OR UPDATE ON Offerings
+BEFORE INSERT ON Offerings
 FOR EACH ROW EXECUTE FUNCTION check_for_offerings_insert();
 
 CREATE OR REPLACE FUNCTION check_for_offerings_insert() RETURNS TRIGGER AS $$
 BEGIN
 
     IF (SELECT EXISTS (SELECT 1 FROM Offerings O WHERE (O.launch_date = NEW.launch_date) and (O.course_id = NEW.course_id))) THEN
+        RAISE EXCEPTION 'Course offerings with same course id must have different launch date';
+        RETURN NULL;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER Offerings_update_trigger
+AFTER UPDATE ON Offerings
+FOR EACH ROW EXECUTE FUNCTION check_for_offerings_update();
+
+CREATE OR REPLACE FUNCTION check_for_offerings_update() RETURNS TRIGGER AS $$
+BEGIN
+
+    IF ((SELECT COUNT(*) FROM Offerings O WHERE (O.launch_date = NEW.launch_date) and (O.course_id = NEW.course_id)) > 1) THEN
         RAISE EXCEPTION 'Course offerings with same course id must have different launch date';
         RETURN NULL;
     END IF;
@@ -394,7 +446,7 @@ begin
     where (R.sid = new.sid and R.course_id = new.course_id and R.launch_date = new.launch_date);
 
     if seats_taken + 1 > session_capacity then 
-        raise notice 'No more seats left for the selected session';
+        raise exception 'No more seats left for the selected session';
         return null;
     end if;
 
@@ -422,7 +474,7 @@ begin
     where S.sid = new.sid and S.course_id = new.course_id and S.launch_date = new.launch_date;
 
     if session_date < new.date then 
-        raise notice 'Cannot change session to a session that is already over!';
+        raise exception 'Cannot change session to a session that is already over!';
         return null;
     end if;
 
@@ -449,7 +501,7 @@ begin
         where cust_id = new.cust_id and number = new.number and sid = new.sid
         and launch_date = new.launch_date and course_id = new.course_id
     ) 
-    then raise notice 'Already registered for course on an earlier date';
+    then raise exception 'Already registered for course on an earlier date';
     return null;
     
     end if;
@@ -484,7 +536,7 @@ begin
     where (R.sid = new.sid and R.course_id = new.course_id and R.launch_date = new.launch_date);
 
     if seats_filled + 1 > session_capacity then 
-        raise notice 'Session is fully subscribed, no more available seats';
+        raise exception 'Session is fully subscribed, no more available seats';
         return null;
     end if;
 
@@ -512,7 +564,7 @@ begin
     where O.launch_date = new.launch_date and O.course_id = new.course_id;
 
     if new.date > offering_reg_deadline - 10  then
-        raise notice 'Can only register for a session 10 days before its registration deadline';
+        raise exception 'Can only register for a session 10 days before its registration deadline';
         return null;
     end if;
     return new;
@@ -546,7 +598,7 @@ begin
         return new;
     
     else
-        raise notice 'No more redemptions left';
+        raise exception 'No more redemptions left';
         return null;
     end if;
 
@@ -577,11 +629,11 @@ begin
     where O.launch_date = new.launch_date and O.course_id = new.course_id;
 
     if new.redeem_date > ses_start_date then
-        raise notice 'Cannot redeem for a session that is already over';
+        raise exception 'Cannot redeem for a session that is already over';
         return null;
 
     elseif new.redeem_date > reg_deadline then
-        raise notice 'Cannot redeem for a session 10 days before the offering registration deadline';
+        raise exception 'Cannot redeem for a session 10 days before the offering registration deadline';
         return null;
     
     else
@@ -639,7 +691,7 @@ BEGIN
     SELECT eid
     FROM Employees
   ) THEN
-    RAISE NOTICE 'employee does not exist';
+    RAISE exception 'employee does not exist';
     RETURN NULL;
   ELSE
     select E.join_date, E.depart_date into join_date, depart_date
@@ -647,10 +699,10 @@ BEGIN
     where eid =  new.eid;
 
     IF new.payment_date < join_date or new.payment_date > depart_date then 
-      RAISE NOTICE 'cannot pay before join and cannot pay after depart';
+      RAISE exception 'cannot pay before join and cannot pay after depart';
       RETURN NULL;
     ELSEIF NEW.num_work_days > (NEW.payment_date - join_date) then 
-      RAISE NOTICE 'cannot add';
+      RAISE exception 'cannot add';
       RETURN NULL;
     END IF;
   END IF;
@@ -669,7 +721,7 @@ BEGIN
     SELECT eid
     FROM Full_time_Emp
   ) THEN
-    RAISE NOTICE 'already a full time emp';
+    RAISE exception 'already a full time emp';
     RETURN NULL;
   END IF;
   RETURN NEW;
@@ -687,7 +739,7 @@ BEGIN
     SELECT eid
     FROM Part_time_Emp
   ) THEN
-    RAISE NOTICE 'already a part time emp';
+    RAISE exception 'already a part time emp';
     RETURN NULL;
   END IF;
   RETURN NEW;
@@ -708,7 +760,7 @@ BEGIN
     SELECT eid
     FROM Full_time_instructors
   ) THEN
-    RAISE NOTICE 'already an administrator or full time instructor';
+    RAISE exception 'already an administrator or full time instructor';
     RETURN NULL;
   END IF;
   RETURN NEW;
@@ -729,7 +781,7 @@ BEGIN
     SELECT eid
     FROM Full_time_instructors
   ) THEN
-    RAISE NOTICE 'already a manager or full time instructor';
+    RAISE exception 'already a manager or full time instructor';
     RETURN NULL;
   END IF;
   RETURN NEW;
@@ -753,7 +805,7 @@ BEGIN
     SELECT eid
     FROM Part_time_instructors
   ) THEN
-    RAISE NOTICE 'already a manager, administrator or part time instructor';
+    RAISE exception 'already a manager, administrator or part time instructor';
     RETURN NULL;
   END IF;
   RETURN NEW;
@@ -771,7 +823,7 @@ BEGIN
     SELECT eid
     FROM Full_time_instructors
   ) THEN
-    RAISE NOTICE 'already a full time instructor';
+    RAISE exception 'already a full time instructor';
     RETURN NULL;
   END IF;
   RETURN NEW;
@@ -790,7 +842,7 @@ BEGIN
     FROM Credit_cards
     WHERE NEW.cust_id = cust_id
   ) THEN
-    RAISE NOTICE 'card expired already';
+    RAISE exception 'card expired already';
     RETURN NULL;
   END IF;
   RETURN NEW;
@@ -835,7 +887,7 @@ BEGIN
     WHERE C.name = I.name
     AND C.course_id = NEW.course_id
   ) THEN
-    RAISE NOTICE 'Instructor is not specialized in that course area';
+    RAISE exception 'Instructor is not specialized in that course area';
     RETURN NULL;
   END IF;
 
@@ -845,7 +897,7 @@ BEGIN
     FROM Courses C
     WHERE C.course_id = NEW.course_id
   ) THEN
-    RAISE NOTICE 'duration of session must match duration of course';
+    RAISE exception 'duration of session must match duration of course';
     RETURN NULL;
   END IF;
 
@@ -856,7 +908,7 @@ BEGIN
     WHERE NEW.date >= E.join_date
     AND (NEW.date <= E.depart_date OR E.depart_date IS NULL)
   ) THEN
-    RAISE NOTICE 'Instructor is no longer an employee during the session date';
+    RAISE exception 'Instructor is no longer an employee during the session date';
     RETURN NULL;
   END IF;
 
@@ -869,7 +921,7 @@ BEGIN
     AND (SELECT EXTRACT(MONTH FROM S.date)) = (SELECT EXTRACT(MONTH FROM CURRENT_DATE));
 
     IF total_hours_taught = 30 OR (total_hours_taught + (NEW.end_time - NEW.start_time) >= 30) THEN
-      RAISE NOTICE 'Each part-time instructor must not teach more than 30 hours for each month.';
+      RAISE exception 'Each part-time instructor must not teach more than 30 hours for each month.';
       RETURN NULL;
     END IF;
   END IF;
@@ -891,7 +943,7 @@ BEGIN
   OR (NEW.start_time <= S.start_time AND NEW.end_time + 1 <= S.end_time));
 
   IF total_sessions - num_sessions_satisfy_constraint > 0 THEN
-    RAISE NOTICE 'Instructor must be available during the time period and cannot teach 2 consecutive sessions.';
+    RAISE exception 'Instructor must be available during the time period and cannot teach 2 consecutive sessions.';
     RETURN NULL;
   END IF;
 
@@ -936,7 +988,7 @@ BEGIN
   ELSE
     IF NOT (NEW.start_time < ALL (SELECT start_time FROM StartTimeTable) AND NEW.end_time < ALL (SELECT start_time FROM StartTimeTable)) OR
       (NEW.start_time > ALL (SELECT end_time FROM EndTimeTable) AND NEW.end_time > ALL (SELECT end_time FROM EndTimeTable)) THEN
-      RAISE NOTICE 'room is occupied at that time';
+      RAISE exception 'room is occupied at that time';
       RETURN NULL;
     ELSE -- room used after this session
       -- update offerings start date
@@ -1084,7 +1136,7 @@ BEGIN
     FROM Sessions
     WHERE NEW.sid = sid
   ) THEN
-    RAISE NOTICE 'cannot cancel after session';
+    RAISE exception 'cannot cancel after session';
     RETURN NULL;
   ELSEIF NEW.date < ALL (
     SELECT date
@@ -1092,7 +1144,7 @@ BEGIN
     WHERE NEW.cust_id = cust_id
     AND NEW.sid = sid
   ) THEN
-    RAISE NOTICE 'cannot cancel before registering';
+    RAISE exception 'cannot cancel before registering';
     RETURN NULL;
   ELSEIF NEW.package_credit = 1 THEN -- update Buys table
     UPDATE Buys B
