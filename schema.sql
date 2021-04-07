@@ -366,6 +366,239 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+
+create TRIGGER check_update_sessions_capacity
+before update
+on Registers
+for each row 
+execute function check_update_ses_capacity();
+
+create or replace function check_update_ses_capacity()
+returns trigger as
+$$
+declare
+    session_capacity integer;
+    seats_taken integer;
+begin
+    select seating_capacity into session_capacity
+    from Sessions Ses join Rooms R on Ses.rid = R.rid
+    where Ses.sid = new.sid and Ses.course_id = new.course_id
+    and Ses.launch_date = new.launch_date;
+
+    select count(*) into seats_taken
+    from Registers R
+    where (R.sid = new.sid and R.course_id = new.course_id and R.launch_date = new.launch_date);
+
+    if seats_taken + 1 > session_capacity then 
+        raise notice 'No more seats left for the selected session';
+        return null;
+    end if;
+
+    return new;
+
+end;
+$$ Language plpgsql;
+
+
+create TRIGGER check_update_sessions_date
+before update
+on Registers
+for each row 
+execute function check_update_ses_date();
+
+
+create or replace function check_update_ses_date()
+returns trigger as
+$$
+declare
+    session_date date;
+begin
+    select S.date into session_date
+    from Sessions S
+    where S.sid = new.sid and S.course_id = new.course_id and S.launch_date = new.launch_date;
+
+    if session_date < new.date then 
+        raise notice 'Cannot change session to a session that is already over!';
+        return null;
+    end if;
+
+    return new;
+
+end;
+$$ Language plpgsql;
+
+
+create TRIGGER check_transaction_for_register_already_registered
+before insert 
+on Registers
+for each row
+execute function check_register_duplicate_registration();
+
+
+create or replace function check_register_duplicate_registration()
+returns trigger as
+$$    
+begin
+    if exists (
+        select 1
+        from Registers
+        where cust_id = new.cust_id and number = new.number and sid = new.sid
+        and launch_date = new.launch_date and course_id = new.course_id
+    ) 
+    then raise notice 'Already registered for course on an earlier date';
+    return null;
+    
+    end if;
+        
+    return new;
+
+end;
+$$ Language plpgsql;
+
+
+
+create TRIGGER check_transaction_for_register_capacity
+before insert 
+on Registers
+for each row
+execute function check_register_capacity();
+
+create or replace function check_register_capacity()
+returns trigger as
+$$
+declare 
+    session_capacity integer;
+    seats_filled integer;
+
+begin
+    select R.seating_capacity into session_capacity
+    from Rooms R join Sessions S on (R.rid = S.rid)
+    where (S.sid = new.sid and S.course_id = new.course_id and S.launch_date = new.launch_date);
+
+    select count(*) into seats_filled
+    from Registers R
+    where (R.sid = new.sid and R.course_id = new.course_id and R.launch_date = new.launch_date);
+
+    if seats_filled + 1 > session_capacity then 
+        raise notice 'Session is fully subscribed, no more available seats';
+        return null;
+    end if;
+
+    return new;
+end;
+$$ Language plpgsql;
+
+
+
+create TRIGGER check_transaction_for_register_deadline
+before insert 
+on Registers
+for each row
+execute function check_register_deadline();
+
+
+create or replace function check_register_deadline()
+returns trigger as
+$$
+declare
+    offering_reg_deadline date;
+begin
+    select registration_deadline into offering_reg_deadline
+    from Offerings O
+    where O.launch_date = new.launch_date and O.course_id = new.course_id;
+
+    if new.date > offering_reg_deadline - 10  then
+        raise notice 'Can only register for a session 10 days before its registration deadline';
+        return null;
+    end if;
+    return new;
+end;
+$$ Language plpgsql;
+
+
+create TRIGGER check_transaction_for_redeem_balance
+before insert 
+on Redeems
+for each row
+execute function check_redeem_balance();
+
+create or replace function check_redeem_balance()
+returns trigger as
+$$
+declare 
+    redemptions_left integer;
+
+begin
+    select num_remaining_redemptions into redemptions_left
+    from Buys
+    where cust_id = new.cust_id;
+
+    if redemptions_left > 0 then
+        update Buys B
+        set num_remaining_redemptions = redemptions_left - 1
+        where B.buy_date = new.buy_date and B.cust_id = new.cust_id and
+        B.number = new.number and B.package_id = new.package_id;
+
+        return new;
+    
+    else
+        raise notice 'No more redemptions left';
+        return null;
+    end if;
+
+end;
+$$ Language plpgsql;
+
+
+create TRIGGER check_transaction_for_redeem_date
+before insert 
+on Redeems
+for each row
+execute function check_redeem_date();
+
+create or replace function check_redeem_date()
+returns trigger as
+$$
+declare 
+    ses_start_date date;
+    reg_deadline date;
+
+begin
+    select S.date into ses_start_date 
+    from Sessions S 
+    where S.sid = new.sid and S.course_id = new.course_id and S.launch_date = new.launch_date;
+
+    select O.registration_deadline into reg_deadline
+    from Offerings O
+    where O.launch_date = new.launch_date and O.course_id = new.course_id;
+
+    if new.redeem_date > ses_start_date then
+        raise notice 'Cannot redeem for a session that is already over';
+        return null;
+
+    elseif new.redeem_date > reg_deadline then
+        raise notice 'Cannot redeem for a session 10 days before the offering registration deadline';
+        return null;
+    
+    else
+        update Buys B
+        set num_remaining_redemptions = redemptions_left - 1
+        where B.buy_date = new.buy_date and B.cust_id = new.cust_id and
+        B.number = new.number and B.package_id = new.package_id;
+        return new;
+    end if;
+
+end;
+$$ Language plpgsql;
+
+
+create TRIGGER check_transaction_for_redeem_date
+before insert 
+on Redeems
+for each row
+execute function check_redeem_date();
+
+
 CREATE OR REPLACE FUNCTION redeems_trigger_func() RETURNS TRIGGER AS $$ 
 BEGIN
     IF (NEW.redeem_date > (SELECT date FROM Sessions s WHERE s.sid = NEW.sid)) THEN -- redeem after session
@@ -387,3 +620,462 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER redeems_trigger
 BEFORE INSERT ON Redeems
 FOR EACH ROW EXECUTE FUNCTION redeems_trigger_func();
+
+
+CREATE TRIGGER for_Pay_slips_trigger
+BEFORE INSERT OR UPDATE ON Pay_slips
+FOR EACH ROW EXECUTE FUNCTION check_for_payslip();
+
+CREATE OR REPLACE FUNCTION check_for_payslip() RETURNS TRIGGER AS $$
+DECLARE
+  join_date DATE;
+  depart_date DATE;
+BEGIN
+  IF NEW.eid NOT IN (
+    SELECT eid
+    FROM Employees
+  ) THEN
+    RAISE NOTICE 'employee does not exist';
+    RETURN NULL;
+  ELSE
+    select join_date, depart_date into join_date, depart_date
+    from Employees
+    where eid =  new.eid;
+
+    IF new.payment_date < join_date or new.payment_date > depart_date then 
+      RAISE NOTICE 'cannot pay before join and cannot pay after depart';
+      RETURN NULL;
+    ELSEIF NEW.num_work_days > (NEW.payment_date - join_date) then 
+      RAISE NOTICE 'cannot add';
+      RETURN NULL;
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER for_Part_time_Emp_trigger
+BEFORE INSERT OR UPDATE ON Part_time_Emp
+FOR EACH ROW EXECUTE FUNCTION check_for_part_time_emp();
+
+CREATE OR REPLACE FUNCTION check_for_part_time_emp() RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.eid IN (
+    SELECT eid
+    FROM Full_time_Emp
+  ) THEN
+    RAISE NOTICE 'already a full time emp';
+    RETURN NULL;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER for_Full_time_Emp_trigger
+BEFORE INSERT OR UPDATE ON Full_time_Emp
+FOR EACH ROW EXECUTE FUNCTION check_for_full_time_emp();
+
+CREATE OR REPLACE FUNCTION check_for_full_time_emp() RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.eid IN (
+    SELECT eid
+    FROM Part_time_Emp
+  ) THEN
+    RAISE NOTICE 'already a part time emp';
+    RETURN NULL;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER for_Managers_ISA
+BEFORE INSERT OR UPDATE ON Managers
+FOR EACH ROW EXECUTE FUNCTION check_Managers();
+
+CREATE OR REPLACE FUNCTION check_Managers() RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.eid IN (
+    SELECT eid
+    FROM Administrators
+  ) OR NEW.eid IN (
+    SELECT eid
+    FROM Full_time_instructors
+  ) THEN
+    RAISE NOTICE 'already an administrator or full time instructor';
+    RETURN NULL;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER for_Administrators_ISA
+BEFORE INSERT OR UPDATE ON Administrators
+FOR EACH ROW EXECUTE FUNCTION check_Administrators();
+
+CREATE OR REPLACE FUNCTION check_Administrators() RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.eid IN (
+    SELECT eid
+    FROM Managers
+  ) OR NEW.eid IN (
+    SELECT eid
+    FROM Full_time_instructors
+  ) THEN
+    RAISE NOTICE 'already a manager or full time instructor';
+    RETURN NULL;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER for_Full_time_instructors
+BEFORE INSERT OR UPDATE ON Full_time_instructors
+FOR EACH ROW EXECUTE FUNCTION check_Full_time_instructors();
+
+CREATE OR REPLACE FUNCTION check_Full_time_instructors() RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.eid IN (
+    SELECT eid
+    FROM Managers
+  ) OR NEW.eid IN (
+    SELECT eid
+    FROM Administrators
+  ) OR NEW.eid IN (
+    SELECT eid
+    FROM Part_time_instructors
+  ) THEN
+    RAISE NOTICE 'already a manager, administrator or part time instructor';
+    RETURN NULL;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER for_Part_time_instructors
+BEFORE INSERT OR UPDATE ON Part_time_instructors
+FOR EACH ROW EXECUTE FUNCTION check_Part_time_instructors();
+
+CREATE OR REPLACE FUNCTION check_Part_time_instructors() RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.eid IN (
+    SELECT eid
+    FROM Full_time_instructors
+  ) THEN
+    RAISE NOTICE 'already a full time instructor';
+    RETURN NULL;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER for_Owns
+BEFORE INSERT OR UPDATE ON Owns
+FOR EACH ROW EXECUTE FUNCTION check_Owns();
+
+CREATE OR REPLACE FUNCTION check_Owns() RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.from_date > (
+    SELECT expiry_date
+    FROM Credit_cards
+    WHERE NEW.cust_id = cust_id
+  ) THEN
+    RAISE NOTICE 'card expired already';
+    RETURN NULL;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
+
+-- amelia
+-- drop trigger if exists for_sessions on sessions;
+-- session start time and end time and rid cannot overlap i.e. room cannot be used for another session.
+CREATE TRIGGER for_Sessions
+BEFORE INSERT OR UPDATE ON Sessions
+FOR EACH ROW EXECUTE FUNCTION check_Sessions();
+
+CREATE OR REPLACE FUNCTION check_Sessions() RETURNS TRIGGER AS $$
+DECLARE
+  total_hours_taught INTEGER;
+  total_sessions INTEGER;
+  num_sessions_satisfy_constraint INTEGER;
+BEGIN
+  DROP TABLE IF EXISTS StartTimeTable, EndTimeTable;
+
+  CREATE TABLE StartTimeTable AS (
+    SELECT start_time
+    FROM Sessions
+    WHERE NEW.rid = rid AND NEW.date = date
+    AND NEW.sid <> sid
+  );
+
+  CREATE TABLE EndTimeTable AS (
+    SELECT end_time
+    FROM Sessions
+    WHERE NEW.rid = rid AND NEW.date = date
+    AND NEW.sid <> sid
+  );
+
+  -- Instructor must still be with the company during the session date.
+  IF NEW.eid NOT IN (
+    SELECT E.eid
+    FROM Employees E
+    WHERE NEW.date >= E.join_date
+    AND (NEW.date <= E.depart_date OR E.depart_date IS NULL)
+  ) THEN
+    RAISE NOTICE 'Instructor is no longer an employee during the session date';
+    RETURN NULL;
+  END IF;
+
+  -- Each part-time instructor must not teach more than 30 hours for each month.
+  IF NEW.eid IN (SELECT eid FROM Part_time_instructors) THEN
+    SELECT SUM(end_time - start_time) INTO total_hours_taught
+    FROM Part_time_instructors P, Sessions S
+    WHERE P.eid = S.eid
+    AND P.eid = NEW.eid
+    AND (SELECT EXTRACT(MONTH FROM S.date)) = (SELECT EXTRACT(MONTH FROM CURRENT_DATE));
+
+    IF total_hours_taught = 30 OR (total_hours_taught + (NEW.end_time - NEW.start_time) >= 30) THEN
+      RAISE NOTICE 'Each part-time instructor must not teach more than 30 hours for each month.';
+      RETURN NULL;
+    END IF;
+  END IF;
+
+  -- Instructor must be available during the time period. and
+  -- An instructor cannot be assigned to teach two consecutive sessions.
+  SELECT COUNT(*) INTO total_sessions -- total number of sessions
+  FROM Sessions S
+  WHERE S.eid = NEW.eid
+  AND S.date = NEW.date
+  AND NEW.sid <> sid;
+
+  SELECT COUNT(*) INTO num_sessions_satisfy_constraint -- number of sessions that satisfy constraint
+  FROM Sessions S
+  WHERE S.eid = NEW.eid
+  AND S.date = NEW.date
+  AND NEW.sid <> S.sid
+  AND ((NEW.start_time - 1 >= S.start_time AND NEW.end_time >= S.end_time)
+  OR (NEW.start_time <= S.start_time AND NEW.end_time + 1 <= S.end_time));
+
+  IF total_sessions - num_sessions_satisfy_constraint > 0 THEN
+    RAISE NOTICE 'Instructor must be available during the time period and cannot teach 2 consecutive sessions.';
+    RETURN NULL;
+  END IF;
+
+  -- Room can only hold one session at any one time.
+  IF (NEW.date, NEW.rid) NOT IN ( -- room not occupied on that day
+    SELECT date, rid
+    FROM Sessions
+  ) THEN
+    -- update offerings start date
+    IF NEW.date < (
+      SELECT start_date
+      FROM Offerings
+      WHERE launch_date = NEW.launch_date
+      AND course_id = NEW.course_id
+    ) THEN
+      UPDATE Offerings
+      SET start_date = NEW.date
+      WHERE launch_date = NEW.launch_date
+      AND course_id = NEW.course_id;
+    END IF;
+
+    -- update offerings end date
+    IF NEW.date > (
+      SELECT end_date
+      FROM Offerings
+      WHERE launch_date = NEW.launch_date
+      AND course_id = NEW.course_id
+    ) THEN
+      UPDATE Offerings
+      SET end_date = NEW.date
+      WHERE launch_date = NEW.launch_date
+      AND course_id = NEW.course_id;
+    END IF;
+
+    -- update seating capacity
+    UPDATE Offerings
+    SET seating_capacity = seating_capacity + (SELECT seating_capacity FROM Rooms R WHERE R.rid = NEW.rid)
+    WHERE launch_date = NEW.launch_date
+    AND course_id = NEW.course_id;
+
+    RETURN NEW;
+  ELSE
+    IF (NEW.start_time < ALL (SELECT start_time FROM StartTimeTable) AND NEW.end_time < ALL (SELECT start_time FROM StartTimeTable)) OR
+      (NEW.start_time > ALL (SELECT end_time FROM EndTimeTable) AND NEW.end_time > ALL (SELECT end_time FROM EndTimeTable)) THEN -- room used after this session
+      -- update offerings start date
+      IF NEW.date < (
+        SELECT start_date
+        FROM Offerings
+        WHERE launch_date = NEW.launch_date
+        AND course_id = NEW.course_id
+      ) THEN
+        UPDATE Offerings
+        SET start_date = NEW.date
+        WHERE launch_date = NEW.launch_date
+        AND course_id = NEW.course_id;
+      END IF;
+
+      -- update offerings end date
+      IF NEW.date > (
+        SELECT end_date
+        FROM Offerings
+        WHERE launch_date = NEW.launch_date
+        AND course_id = NEW.course_id
+      ) THEN
+        UPDATE Offerings
+        SET end_date = NEW.date
+        WHERE launch_date = NEW.launch_date
+        AND course_id = NEW.course_id;
+      END IF;
+
+      -- update seating capacity
+      UPDATE Offerings
+      SET seating_capacity = seating_capacity + (SELECT seating_capacity FROM Rooms R WHERE R.rid = NEW.rid)
+      WHERE launch_date = NEW.launch_date
+      AND course_id = NEW.course_id;
+
+      RETURN NEW; -- need to change offerings
+    ELSE -- room used during this session
+      RAISE NOTICE 'room is occupied at that time';
+      RETURN NULL;
+    END IF;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- drop trigger if exists for_session_deletion on sessions;
+CREATE TRIGGER for_session_deletion
+AFTER DELETE ON Sessions
+FOR EACH ROW EXECUTE FUNCTION update_sessions_on_deletion();
+
+CREATE OR REPLACE FUNCTION update_sessions_on_deletion() RETURNS TRIGGER AS $$
+DECLARE
+  offering_start_date Date;
+  offering_end_date Date;
+  num_of_sessions INTEGER;
+
+  earliest_session Date;
+  latest_session Date;
+
+  target_reg INTEGER;
+  capacity INTEGER;
+BEGIN
+  SELECT COUNT(*) INTO num_of_sessions
+  FROM Sessions S
+  WHERE S.launch_date = OLD.launch_date
+  AND S.course_id = OLD.course_id;
+
+  SELECT start_date, end_date INTO offering_start_date, offering_end_date
+  FROM Offerings O
+  WHERE O.launch_date = OLD.launch_date
+  AND O.course_id = OLD.course_id;
+
+  IF num_of_sessions = 0 THEN -- last session already, if delete this session must delete offering too.
+    DELETE FROM Offerings
+    WHERE launch_date = OLD.launch_date
+    AND course_id = OLD.course_id;
+  END IF;
+
+  -- if start_date = s.date, change start date to next earliest date
+  IF offering_start_date = OLD.date THEN
+    SELECT date INTO earliest_session -- new earliest session
+    FROM Sessions S
+    WHERE S.launch_date = OLD.launch_date
+    AND S.course_id = OLD.course_id
+    AND S.sid <> OLD.sid
+    ORDER BY date ASC
+    LIMIT 1;
+
+    UPDATE Offerings O
+    SET start_date = earliest_session
+    WHERE launch_date = OLD.launch_date
+    AND course_id = OLD.course_id;
+  END IF;
+
+  -- if end_date = s.date, change end date to next latest date
+  IF offering_end_date = OLD.date THEN
+    SELECT date INTO latest_session -- new latest session
+    FROM Sessions S
+    WHERE S.launch_date = OLD.launch_date
+    AND S.course_id = OLD.course_id
+    AND S.sid <> OLD.sid
+    ORDER BY date DESC
+    LIMIT 1;
+
+    UPDATE Offerings
+    SET end_date = latest_session
+    WHERE launch_date = OLD.launch_date
+    AND course_id = OLD.course_id;
+  END IF;
+
+  SELECT seating_capacity INTO capacity
+  FROM Offerings O
+  WHERE O.launch_date = OLD.launch_date
+  AND O.course_id = OLD.course_id;
+
+  SELECT target_number_registrations INTO target_reg
+  FROM Offerings O
+  WHERE O.launch_date = OLD.launch_date
+  AND O.course_id = OLD.course_id;
+
+  -- if new seating capacity is lesser than target, decrease target.
+  IF (capacity - (SELECT seating_capacity FROM Rooms R WHERE R.rid = OLD.rid)) < target_reg THEN
+    UPDATE Offerings
+    SET target_number_registrations = capacity
+    WHERE launch_date = OLD.launch_date
+    AND course_id = OLD.course_id;
+  END IF;
+
+  -- change seating capacity = original - rid.capacity
+  UPDATE Offerings
+  SET seating_capacity = seating_capacity - (SELECT seating_capacity FROM Rooms R WHERE R.rid = OLD.rid)
+  WHERE launch_date = OLD.launch_date
+  AND course_id = OLD.course_id;
+
+  RETURN OLD;
+
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER for_Cancels
+BEFORE INSERT OR UPDATE ON Cancels
+FOR EACH ROW EXECUTE FUNCTION check_Cancels();
+
+CREATE OR REPLACE FUNCTION check_Cancels() RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.date > ALL (
+    SELECT date
+    FROM Sessions
+    WHERE NEW.sid = sid
+  ) THEN
+    RAISE NOTICE 'cannot cancel after session';
+    RETURN NULL;
+  ELSEIF NEW.date < ALL (
+    SELECT date
+    FROM Registers
+    WHERE NEW.cust_id = cust_id
+    AND NEW.sid = sid
+  ) THEN
+    RAISE NOTICE 'cannot cancel before registering';
+    RETURN NULL;
+  ELSEIF NEW.package_credit = 1 THEN -- update Buys table
+    UPDATE Buys B
+    SET num_remaining_redemptions = num_remaining_redemptions + 1
+    WHERE B.cust_id = NEW.cust_id;
+
+    RETURN NEW;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
