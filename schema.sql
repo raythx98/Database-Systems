@@ -327,7 +327,7 @@ CREATE OR REPLACE FUNCTION check_for_offerings_insert_deferrable() RETURNS TRIGG
 BEGIN
 
     IF (NEW.seating_capacity <> (SELECT COALESCE(SUM(SR.seating_capacity), 0) FROM (Sessions natural join Rooms) as SR WHERE SR.launch_date = NEW.launch_date and SR.course_id = NEW.course_id)) THEN
-        RAISE EXCEPTION 'Seating capacity does not correspond to room capacity of sessions';
+        RAISE EXCEPTION 'Seating capacity does not correspond to room capacity of sessions, launch date: %, course id: %', NEW.launch_date, NEW.course_id;
         RETURN NULL;
     END IF;
 
