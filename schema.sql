@@ -326,23 +326,23 @@ FOR EACH ROW EXECUTE FUNCTION check_for_offerings_insert_deferrable();
 CREATE OR REPLACE FUNCTION check_for_offerings_insert_deferrable() RETURNS TRIGGER AS $$
 BEGIN
 
-    IF (NEW.seating_capacity <> (SELECT SUM(SR.seating_capacity) FROM (Sessions natural join Rooms) as SR WHERE SR.launch_date = NEW.launch_date and SR.course_id = NEW.course_id)) THEN
-        RAISE NOTICE 'Seating capacity does not correspond to room capacity of sessions';
+    IF (NEW.seating_capacity <> (SELECT COALESCE(SUM(SR.seating_capacity), 0) FROM (Sessions natural join Rooms) as SR WHERE SR.launch_date = NEW.launch_date and SR.course_id = NEW.course_id)) THEN
+        RAISE EXCEPTION 'Seating capacity does not correspond to room capacity of sessions';
         RETURN NULL;
     END IF;
 
     IF (SELECT NOT EXISTS (SELECT 1 FROM Sessions S WHERE S.launch_date = NEW.launch_date and S.course_id = NEW.course_id)) THEN
-        RAISE NOTICE 'Offerings should contain at least 1 session';
+        RAISE EXCEPTION 'Offerings should contain at least 1 session';
         RETURN NULL;
     END IF;
 
-    IF (NEW.start_date <> (SELECT min(date) FROM Sessions S WHERE S.launch_date = NEW.launch_date and S.course_id = NEW.course_id)) THEN
-        RAISE NOTICE 'Start date does not correspond to earliest session';
+    IF (NEW.start_date <> (SELECT COALESCE(min(date), 0) FROM Sessions S WHERE S.launch_date = NEW.launch_date and S.course_id = NEW.course_id)) THEN
+        RAISE EXCEPTION 'Start date does not correspond to earliest session';
         RETURN NULL;
     END IF;
 
-    IF (NEW.end_date <> (SELECT max(date) FROM Sessions S WHERE S.launch_date = NEW.launch_date and S.course_id = NEW.course_id)) THEN
-        RAISE NOTICE 'End date does not correspond to latest session';
+    IF (NEW.end_date <> (SELECT COALESCE(max(date), 0) FROM Sessions S WHERE S.launch_date = NEW.launch_date and S.course_id = NEW.course_id)) THEN
+        RAISE EXCEPTION 'End date does not correspond to latest session';
         RETURN NULL;
     END IF;
 
