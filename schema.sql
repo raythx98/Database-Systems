@@ -637,8 +637,8 @@ BEGIN
     RAISE NOTICE 'employee does not exist';
     RETURN NULL;
   ELSE
-    select join_date, depart_date into join_date, depart_date
-    from Employees
+    select E.join_date, E.depart_date into join_date, depart_date
+    from Employees E
     where eid =  new.eid;
 
     IF new.payment_date < join_date or new.payment_date > depart_date then 

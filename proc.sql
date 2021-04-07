@@ -675,6 +675,160 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- q25
+-- 'part-time' num_work_days = null, monthly_rate = null
+-- 'full-time' num_work_hours = null, hourly_rate = null
+-- dk whether to insert null tuples?
+CREATE OR REPLACE FUNCTION pay_salary()
+RETURNS TABLE (
+  eid INTEGER,
+  name TEXT,
+  status TEXT, -- 'part-time' or 'full-time'
+  num_work_days INTEGER,
+  num_work_hours INTEGER,
+  hourly_rate NUMERIC,
+  monthly_rate NUMERIC,
+  salary_paid NUMERIC
+) AS $$
+DECLARE
+  payment_date Date;
+  payment_day INTEGER;
+  payment_month INTEGER;
+  payment_year INTEGER;
+  last_day_of_month INTEGER;
+  curs CURSOR FOR (
+    SELECT *
+    FROM Employees E
+    ORDER BY E.eid ASC
+  );
+
+  r RECORD;
+  add_hourly_rate INTEGER;
+  add_monthly_rate INTEGER;
+  add_hours_worked INTEGER;
+  depart_day INTEGER;
+
+BEGIN
+  SELECT (CURRENT_DATE - 285) INTO payment_date;
+  SELECT EXTRACT(DAY FROM CURRENT_DATE) INTO payment_day;
+  SELECT EXTRACT(MONTH FROM CURRENT_DATE) INTO payment_month;
+  SELECT EXTRACT(YEAR FROM (CURRENT_DATE - 285)) INTO payment_year;
+  SELECT DATE_PART('days', DATE_TRUNC('month', CURRENT_TIMESTAMP) + '1 MONTH'::INTERVAL - '1 DAY'::INTERVAL) INTO last_day_of_month;
+
+  OPEN curs;
+  
+  LOOP
+    FETCH curs INTO r;
+    EXIT WHEN NOT FOUND;
+
+    IF payment_date < r.join_date THEN
+      CONTINUE; -- don't have to pay before join
+    
+    -- part-time
+    ELSEIF r.eid IN (SELECT P.eid FROM Part_time_Emp P) THEN
+      SELECT SUM(end_time - start_time) INTO add_hours_worked
+      FROM Part_time_Emp P, Sessions S
+      WHERE P.eid = S.eid
+      AND P.eid = r.eid
+      AND EXTRACT(YEAR FROM S.date) = payment_year
+      AND EXTRACT(MONTH FROM S.date) = payment_month;
+
+      SELECT P.hourly_rate INTO add_hourly_rate
+      FROM Part_time_Emp P
+      WHERE P.eid = r.eid;
+
+      IF add_hours_worked IS NOT NULL THEN
+        eid := r.eid;
+        name := r.name;
+        status := 'part-time';
+        num_work_days := NULL;
+        hourly_rate := add_hourly_rate;
+        monthly_rate := NULL;
+        salary_paid := (add_hours_worked * add_hourly_rate);
+        RETURN NEXT;
+
+        INSERT INTO Pay_slips(payment_date, amount, num_work_hours, num_work_days, eid)
+        VALUES (payment_date, add_hours_worked * add_hourly_rate, add_hours_worked, NULL, r.eid);
+      END IF;
+    
+    -- full-time
+    ELSE
+
+      SELECT F.monthly_rate INTO add_monthly_rate
+      FROM Full_time_Emp F
+      WHERE F.eid = r.eid;
+
+      eid := r.eid;
+      name := r.name;
+      status := 'full-time';
+      hourly_rate := NULL;
+      monthly_rate := add_monthly_rate;
+      
+      IF r.depart_date IS NULL OR payment_date <= r.depart_date THEN -- pay
+        IF payment_month = EXTRACT(MONTH FROM r.join_date) THEN -- joined this month
+          IF (r.depart_date IS NOT NULL) AND (payment_month = EXTRACT(MONTH FROM r.depart_date)) THEN -- first month of work = last month of work
+            -- first work day = join day
+            -- last work day = depart day
+            num_work_days := r.depart_date - r.join_date + 1;
+            salary_paid := ((r.depart_date - r.join_date + 1) * add_monthly_rate);
+            RETURN NEXT;
+
+            INSERT INTO Pay_slips(payment_date, amount, num_work_hours, num_work_days, eid)
+            VALUES (CURRENT_DATE - 285, (r.depart_date - r.join_date) * add_monthly_rate, NULL, r.depart_date - r.join_date, r.eid);
+
+          ELSE -- paying for first month of work, not leaving in this month
+            -- first work day = join day
+            -- last work day = last day of month
+            num_work_days := last_day_of_month - EXTRACT(DAY FROM r.join_date) + 1;
+            salary_paid := ((last_day_of_month - EXTRACT(DAY FROM r.join_date) + 1) * add_monthly_rate);
+            RETURN NEXT;
+
+            INSERT INTO Pay_slips(payment_date, amount, num_work_hours, num_work_days, eid)
+            VALUES (CURRENT_DATE - 285, (last_day_of_month - EXTRACT(DAY FROM r.join_date) + 1) * add_monthly_rate, NULL, last_day_of_month - EXTRACT(DAY FROM r.join_date) + 1, r.eid);
+
+          END IF;
+
+        ELSEIF (r.depart_date IS NULL) OR payment_month < EXTRACT(MONTH FROM r.depart_date) THEN --didn't join and didn't depart
+          -- first work day = 1
+          -- last work day = last day of month
+          num_work_days := last_day_of_month;
+          salary_paid := (last_day_of_month * add_monthly_rate);
+          RETURN NEXT;
+
+          INSERT INTO Pay_slips(payment_date, amount, num_work_hours, num_work_days, eid)
+          VALUES (CURRENT_DATE - 285, last_day_of_month * add_monthly_rate, NULL, last_day_of_month, r.eid);
+
+        ELSE -- paying for last month of work, didn't join this month
+          -- first work day = 1
+          -- last work day = depart day
+          SELECT EXTRACT(DAY FROM r.depart_date) INTO depart_day;
+          num_work_days := depart_day; --wrong
+          salary_paid := (depart_day * add_monthly_rate);
+          RETURN NEXT;
+
+          INSERT INTO Pay_slips(payment_date, amount, num_work_hours, num_work_days, eid)
+          VALUES (CURRENT_DATE - 285, r.depart_day * add_monthly_rate, NULL, r.depart_day, r.eid);
+        END IF;
+
+      ELSEIF (r.depart_date IS NOT NULL) AND payment_date > r.depart_date AND payment_date >= r.join_date AND payment_month = EXTRACT(MONTH FROM r.depart_date) THEN -- pay the last month after departing
+        -- first work day = 1
+        -- last work day = depart day
+        SELECT EXTRACT(DAY FROM r.depart_date) INTO depart_day;
+        num_work_days := r.depart_day;
+        salary_paid := (r.depart_day * add_monthly_rate);
+        RETURN NEXT;
+
+        INSERT INTO Pay_slips(payment_date, amount, num_work_hours, num_work_days, eid)
+        VALUES (CURRENT_DATE - 285, r.depart_day * add_monthly_rate, NULL, r.depart_day, r.eid);
+
+      END IF;
+
+    END IF;
+  END LOOP;
+  CLOSE curs;
+
+END; 
+$$ LANGUAGE plpgsql;
+
 
 -- q27
  -- top N packages
