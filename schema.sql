@@ -126,10 +126,10 @@ CREATE TABLE Offerings (
   course_id INTEGER REFERENCES Courses
     ON DELETE CASCADE,
   PRIMARY KEY(launch_date, course_id),
-  CHECK (start_date <= end_date AND launch_date <= start_date),
-  CHECK (registration_deadline >= launch_date AND registration_deadline <= end_date),
-  CHECK (target_number_registrations <= seating_capacity),
-  CHECK (registration_deadline <= start_date - 10)
+  CONSTRAINT a1 CHECK (start_date <= end_date AND launch_date <= start_date),
+  CONSTRAINT b2 CHECK(registration_deadline >= launch_date AND registration_deadline <= end_date),
+  CONSTRAINT c3 CHECK(target_number_registrations <= seating_capacity),
+  CONSTRAINT d4 CHECK(registration_deadline = start_date - 10)
 );
 
 CREATE TABLE Sessions (
@@ -336,13 +336,13 @@ BEGIN
         RETURN NULL;
     END IF;
 
-    IF (NEW.start_date <> (SELECT COALESCE(min(date), 0) FROM Sessions S WHERE S.launch_date = NEW.launch_date and S.course_id = NEW.course_id)) THEN
-        RAISE EXCEPTION 'Start date does not correspond to earliest session';
+    IF (NEW.start_date <> (SELECT COALESCE(min(date), date'1000-01-01') FROM Sessions S WHERE S.launch_date = NEW.launch_date and S.course_id = NEW.course_id)) THEN
+        RAISE EXCEPTION 'Start date does not correspond to earliest session, launch date: %, course id: %', NEW.launch_date, NEW.course_id;
         RETURN NULL;
     END IF;
 
-    IF (NEW.end_date <> (SELECT COALESCE(max(date), 0) FROM Sessions S WHERE S.launch_date = NEW.launch_date and S.course_id = NEW.course_id)) THEN
-        RAISE EXCEPTION 'End date does not correspond to latest session';
+    IF (NEW.end_date <> (SELECT COALESCE(max(date), date'1000-01-01') FROM Sessions S WHERE S.launch_date = NEW.launch_date and S.course_id = NEW.course_id)) THEN
+        RAISE EXCEPTION 'End date does not correspond to latest session, launch date: %, course id: %', NEW.launch_date, NEW.course_id;
         RETURN NULL;
     END IF;
 
