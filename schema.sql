@@ -569,7 +569,7 @@ begin
         raise notice 'Cannot redeem for a session that is already over';
         return null;
 
-    if new.redeem_date > reg_deadline then
+    elseif new.redeem_date > reg_deadline then
         raise notice 'Cannot redeem for a session 10 days before the offering registration deadline';
         return null;
     
