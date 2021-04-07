@@ -554,7 +554,7 @@ returns trigger as
 $$
 declare 
     ses_start_date date;
-    reg_deadline date
+    reg_deadline date;
 
 begin
     select S.date into ses_start_date 
@@ -569,7 +569,7 @@ begin
         raise notice 'Cannot redeem for a session that is already over';
         return null;
 
-    if new.redeem_date > reg_deadline then
+    elseif new.redeem_date > reg_deadline then
         raise notice 'Cannot redeem for a session 10 days before the offering registration deadline';
         return null;
     
