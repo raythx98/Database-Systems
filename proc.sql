@@ -1,3 +1,149 @@
+-- 1
+-- used array for courseareas
+-- array cant be null for instructor and manager
+-- array must be null for administrators
+-- format of category must be correct
+CREATE OR REPLACE FUNCTION add_employee(name TEXT, address TEXT, phone INTEGER, email TEXT, salary NUMERIC, join_date Date, category TEXT, courseareas TEXT ARRAY)
+RETURNS VOID AS $$
+DECLARE
+    id INT;
+    length INT;
+    counter INT;
+BEGIN
+    length := array_length(courseareas, 1);
+    counter := 1;
+    IF (category = 'Manager') THEN
+        IF (length IS NULL) THEN
+            RAISE EXCEPTION 'Course areas cannot be empty for managers.';
+        END IF;
+        INSERT INTO Employees (name, phone, email, join_date, address, depart_date) values (name, phone, email, join_date, address, NULL);
+        id := (SELECT eid FROM Employees ORDER BY eid DESC LIMIT 1);
+        INSERT INTO Full_time_Emp (eid, monthly_rate) values (id, salary);
+        INSERT INTO Managers (eid) values (id);
+            IF counter < length THEN
+                LOOP
+                    EXIT WHEN counter > length;
+                    INSERT INTO Course_areas (name, eid) values (courseareas[counter], id);
+                    counter := counter + 1;
+                END LOOP;
+            END IF;
+    ELSEIF (category = 'Administrator')  THEN
+        IF (length > 0) THEN
+            RAISE EXCEPTION 'Course areas must be empy for administrator.';
+        END IF;
+        INSERT INTO Employees (name, phone, email, join_date, address, depart_date) values (name, phone, email, join_date, address, NULL);
+        id := (SELECT eid FROM Employees ORDER BY eid DESC LIMIT 1);
+        INSERT INTO Full_time_Emp (eid, monthly_rate) values (id, salary);
+        INSERT INTO Administrators (eid) values (id);
+    ELSEIF (category = 'Instructor') THEN
+        IF (length IS NULL) THEN
+            RAISE EXCEPTION 'Course areas cannot be empty for instructors.';
+        END IF;
+        INSERT INTO Employees (name, phone, email, join_date, address, depart_date) values (name, phone, email, join_date, address, NULL);
+        id := (SELECT eid FROM Employees ORDER BY eid DESC LIMIT 1);
+        IF counter < length THEN
+            LOOP
+                EXIT WHEN counter > length;
+                INSERT INTO Instructors (eid, name) values (id, courseareas[counter]);
+                counter := counter + 1;
+            END LOOP;
+        END IF;
+        IF (salary <= 20) THEN -- part time
+            INSERT INTO Part_time_Emp (eid, hourly_rate) values (id, salary);
+            INSERT INTO Part_time_instructors (eid) values (id);
+        ELSE -- full time
+            INSERT INTO Full_time_Emp (eid, monthly_rate) values (id, salary);
+            INSERT INTO Full_time_instructors (eid) values (id);
+        END IF;
+    ELSE
+        RAISE EXCEPTION 'Format of category can only be Manager, Administrator or Instructor.';
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 2
+CREATE OR REPLACE FUNCTION remove_employee(input_eid INTEGER, input_depart_date Date) RETURNS VOID AS $$
+BEGIN
+    IF ((select depart_date from Employees where eid = input_eid) IS NOT NULL) THEN
+        RAISE EXCEPTION 'This employee has already been removed.';
+    ELSEIF ((select count(*) from Managers where eid = input_eid) = 1) THEN -- is a manager
+        IF ((select count(*) from Course_areas where eid = input_eid) = 0) THEN -- not managing any area
+            UPDATE Employees 
+            SET depart_date = input_depart_date
+            WHERE eid = input_eid;
+        END IF;
+        RAISE EXCEPTION 'This employee is a manager that is currently managing an area and cannot be removed.';
+    ELSEIF ((select count(*) from Administrators where eid = input_eid) = 1) THEN -- is an administrator
+        IF ((select count(*) from (select * from Offerings where eid = input_eid and registration_deadline < input_depart_date) as temp) = 0) THEN -- not managing any area
+            UPDATE Employees 
+            SET depart_date = input_depart_date
+            WHERE eid = input_eid;
+        END IF;
+        RAISE EXCEPTION 'This employee is an administrator that is currently handling a course offering and cannot be removed.';
+    ELSEIF ((select count(*) from Instructors where eid = input_eid) = 1) THEN -- is an instructor
+        IF ((select count(*) from (select date from Sessions where eid = input_eid and date > input_depart_date) as temp) = 0) THEN
+            UPDATE Employees 
+            SET depart_date = input_depart_date
+            WHERE eid = input_eid;
+        END IF;
+        RAISE EXCEPTION 'This employee is an instructor that is currently teaching a course session and cannot be removed.';
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 3
+CREATE OR REPLACE FUNCTION add_customer(input_name TEXT, input_address TEXT, input_phone INTEGER, 
+input_email TEXT, input_number TEXT, input_CVV INTEGER, input_expiry_date Date) RETURNS VOID AS $$
+DECLARE
+    cid INTEGER;
+BEGIN
+    INSERT INTO Customers (name, email, address, phone) values (input_name, input_email, input_address, input_phone);
+    cid := (SELECT cust_id FROM Customers ORDER BY cust_id DESC LIMIT 1);
+    INSERT INTO Credit_cards (number, CVV, expiry_date, cust_id) values (input_number, input_CVV, input_expiry_date, cid);
+    INSERT INTO Owns (number, cust_id, from_date) values (input_number, cid, CURRENT_DATE);
+END;
+$$ LANGUAGE plpgsql;
+
+-- 4 need to retest after update on cascade command
+CREATE OR REPLACE PROCEDURE update_credit_card(input_cust_id INTEGER, input_number TEXT, input_CVV INTEGER, input_expiry_date Date) AS $$
+    UPDATE Credit_cards
+    SET number = input_number, CVV = input_CVV, expiry_date = input_expiry_date
+    WHERE cust_id = input_cust_id;
+$$ LANGUAGE SQL;
+
+-- 5
+CREATE OR REPLACE PROCEDURE add_course(title TEXT, description TEXT, area TEXT, duration NUMERIC) AS $$
+    INSERT INTO Courses (title, duration, description, name) values (title, duration, description, area);
+$$ LANGUAGE SQL;
+
+-- 6
+CREATE OR REPLACE FUNCTION find_instructors(input_course_id INTEGER, session_date Date, input_start_time INTEGER) 
+RETURNS TABLE(output_eid INTEGER, output_name TEXT) AS $$
+BEGIN
+    -- instructors who can teach
+  RETURN QUERY
+    (select eid, name 
+    from employees 
+    where eid in (
+        select eid
+        from instructors
+        where name in (
+            select name 
+            from courses 
+            where courses.course_id = input_course_id
+            ))
+    except
+    -- instructors who cannot teach
+    SELECT eid, name
+    FROM Employees
+    WHERE eid in (
+        SELECT eid
+        FROM Sessions
+        WHERE (Sessions.date = session_date 
+        and (input_start_time + (SELECT duration FROM Courses WHERE courses.course_id = input_course_id)) > Sessions.start_time 
+        and input_start_time < Sessions.end_time)));
+END;
+$$ LANGUAGE plpgsql;
 
 -- 8
 -- If session_duration ends after close/rest time return empty
@@ -288,7 +434,90 @@ $$ LANGUAGE PLPGSQL;
 
 
 
+-- 26
+-- returns exactly 6 months, qns wants 6 months without caring about exact?
+CREATE OR REPLACE FUNCTION promote_courses() 
+RETURNS TABLE(output_cust_id INTEGER, output_cust_name TEXT, output_course_area TEXT, output_course_id INTEGER, output_title TEXT, output_launch_date Date,
+output_registration_deadline Date, output_fees NUMERIC) AS $$
+BEGIN
+    RETURN QUERY
+    select * from (select temp.cust_id, c.name, temp.name, courses.course_id, courses.title, o.launch_date, o.registration_deadline, o.fees
+    from (select temp.cust_id, c.name from (SELECT * 
+    FROM (SELECT ROW_NUMBER() OVER (PARTITION BY cust_id order by date DESC) as r, t.*
+    FROM (select * from (select cust_id from (select *, 
+    case when 1=1 then CURRENT_DATE - interval '6 months' end as inactive from registers) as temp 
+    where launch_date < inactive) as temp natural left outer join registers r) as t ) x
+    WHERE x.r <= 3) as temp natural join courses c
+    union                                         
+    select not_registered.cust_id, ca.name from (select distinct cust_id from customers except select cust_id from registers) as not_registered 
+    cross join course_areas ca) as temp inner join customers c on temp.cust_id = c.cust_id inner join courses on temp.name = courses.name natural join offerings o) as temp
+    where CURRENT_DATE < registration_deadline
+    order by cust_id, registration_deadline;
+END;
+$$ LANGUAGE plpgsql;
 
+-- 28 i cant test this LOL i need more data got a feeling its not very correct
+CREATE OR REPLACE FUNCTION popular_courses() RETURNS 
+TABLE (output_course_id INTEGER, output_title TEXT, output_area TEXT, output_num_offerings INTEGER, output_registration INTEGER) AS $$
+DECLARE
+    curs CURSOR FOR (select course_id, count, title, name
+    from (select * from
+    (select course_id, start_date, count from
+    (select r.course_id, r.launch_date, count(*) 
+    from registers r 
+    where (select extract(year from date) = (select extract(year from current_date))) 
+    group by r.course_id, r.launch_date) as temp natural join offerings o) as temp
+    where course_id in
+    (select course_id from (select course_id, count(*) from offerings 
+    where (select extract(year from start_date) = (select extract(year from current_date))) 
+    group by course_id) as temp where count > 1) order by course_id, start_date) as temp natural join
+    courses c);
+    r RECORD;
+    prv_total INTEGER;
+    prv_courseid INTEGER;
+    prv_title TEXT;
+    prv_area TEXT;
+    add_record INTEGER; -- 0 dont add, 1 add
+    num_offerings INTEGER;
+BEGIN
+    prv_total := 0;
+    prv_courseid := 0;
+    prv_title := NULL;
+    prv_area := NULL;
+    add_record := 0;
+    num_offerings := 0;
+    OPEN curs;
+    LOOP
+        FETCH curs INTO r;
+        EXIT WHEN NOT FOUND;
+        IF prv_courseid != r.course_id and add_record = 1 THEN
+            output_course_id := prv_courseid;
+            output_title := prv_title;
+            output_area := prv_area; 
+            output_num_offerings := num_offerings;
+            output_registration := prv_total;
+            num_offerings := 0;
+            add_record := 0;
+            RETURN NEXT;
+        ELSEIF prv_courseid != r.course_id THEN
+            num_offerings := 0;
+            add_record := 0;
+        ELSEIF prv_courseid = r.course_id THEN
+            IF r.count > prv_total THEN
+                add_record := 1;
+            ELSEIF r.count <= prv_total THEN
+                add_record := 0;
+            END IF;
+        END IF;
+        prv_courseid := r.course_id;
+        prv_total := r.count;
+        prv_title := r.title;
+        prv_area := r.name;
+        num_offerings := num_offerings + 1;
+    END LOOP;
+    CLOSE curs;
+END;
+$$ LANGUAGE plpgsql;
 
 --30
 CREATE OR REPLACE FUNCTION view_manager_report() 

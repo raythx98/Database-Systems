@@ -78,6 +78,7 @@ CREATE TABLE Credit_cards (
   expiry_date Date NOT NULL,
   cust_id INTEGER NOT NULL
     REFERENCES Customers
+    ON UPDATE CASCADE
 );
 
 CREATE TABLE Owns (
