@@ -364,3 +364,25 @@ BEGIN
     RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION redeems_trigger_func() RETURNS TRIGGER AS $$ 
+BEGIN
+    IF (NEW.redeem_date > (SELECT date FROM Sessions s WHERE s.sid = NEW.sid)) THEN -- redeem after session
+        raise exception 'Redeem date is after session date.';
+        RETURN NULL; -- dont insert
+        
+    ELSEIF (NEW.buy_date < (SELECT sale_start_date FROM Course_packages cp where cp.package_id = NEW.package_id) 
+    or NEW.buy_date > (SELECT sale_end_date FROM Course_packages cp where cp.package_id = NEW.package_id)) THEN -- i can delete this right
+        raise exception 'Buy date is not during course package sales';
+        RETURN NULL; -- dont insert
+    ELSE
+        INSERT INTO Registers (date, cust_id, number, sid, launch_date, course_id) 
+        values (NEW.redeem_date, NEW.cust_id, NEW.number, NEW.sid, NEW.launch_date, NEW.course_id);
+        RETURN NEW;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER redeems_trigger
+BEFORE INSERT ON Redeems
+FOR EACH ROW EXECUTE FUNCTION redeems_trigger_func();
