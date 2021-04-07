@@ -708,10 +708,10 @@ DECLARE
   depart_day INTEGER;
 
 BEGIN
-  SELECT (CURRENT_DATE - 285) INTO payment_date;
+  SELECT CURRENT_DATE INTO payment_date;
   SELECT EXTRACT(DAY FROM CURRENT_DATE) INTO payment_day;
   SELECT EXTRACT(MONTH FROM CURRENT_DATE) INTO payment_month;
-  SELECT EXTRACT(YEAR FROM (CURRENT_DATE - 285)) INTO payment_year;
+  SELECT EXTRACT(YEAR FROM CURRENT_DATE) INTO payment_year;
   SELECT DATE_PART('days', DATE_TRUNC('month', CURRENT_TIMESTAMP) + '1 MONTH'::INTERVAL - '1 DAY'::INTERVAL) INTO last_day_of_month;
 
   OPEN curs;
@@ -773,7 +773,7 @@ BEGIN
             RETURN NEXT;
 
             INSERT INTO Pay_slips(payment_date, amount, num_work_hours, num_work_days, eid)
-            VALUES (CURRENT_DATE - 285, (r.depart_date - r.join_date) * add_monthly_rate, NULL, r.depart_date - r.join_date, r.eid);
+            VALUES (CURRENT_DATE, (r.depart_date - r.join_date) * add_monthly_rate, NULL, r.depart_date - r.join_date, r.eid);
 
           ELSE -- paying for first month of work, not leaving in this month
             -- first work day = join day
@@ -783,7 +783,7 @@ BEGIN
             RETURN NEXT;
 
             INSERT INTO Pay_slips(payment_date, amount, num_work_hours, num_work_days, eid)
-            VALUES (CURRENT_DATE - 285, (last_day_of_month - EXTRACT(DAY FROM r.join_date) + 1) * add_monthly_rate, NULL, last_day_of_month - EXTRACT(DAY FROM r.join_date) + 1, r.eid);
+            VALUES (CURRENT_DATE, (last_day_of_month - EXTRACT(DAY FROM r.join_date) + 1) * add_monthly_rate, NULL, last_day_of_month - EXTRACT(DAY FROM r.join_date) + 1, r.eid);
 
           END IF;
 
@@ -795,7 +795,7 @@ BEGIN
           RETURN NEXT;
 
           INSERT INTO Pay_slips(payment_date, amount, num_work_hours, num_work_days, eid)
-          VALUES (CURRENT_DATE - 285, last_day_of_month * add_monthly_rate, NULL, last_day_of_month, r.eid);
+          VALUES (CURRENT_DATE, last_day_of_month * add_monthly_rate, NULL, last_day_of_month, r.eid);
 
         ELSE -- paying for last month of work, didn't join this month
           -- first work day = 1
@@ -806,7 +806,7 @@ BEGIN
           RETURN NEXT;
 
           INSERT INTO Pay_slips(payment_date, amount, num_work_hours, num_work_days, eid)
-          VALUES (CURRENT_DATE - 285, r.depart_day * add_monthly_rate, NULL, r.depart_day, r.eid);
+          VALUES (CURRENT_DATE, r.depart_day * add_monthly_rate, NULL, r.depart_day, r.eid);
         END IF;
 
       ELSEIF (r.depart_date IS NOT NULL) AND payment_date > r.depart_date AND payment_date >= r.join_date AND payment_month = EXTRACT(MONTH FROM r.depart_date) THEN -- pay the last month after departing
@@ -818,7 +818,7 @@ BEGIN
         RETURN NEXT;
 
         INSERT INTO Pay_slips(payment_date, amount, num_work_hours, num_work_days, eid)
-        VALUES (CURRENT_DATE - 285, r.depart_day * add_monthly_rate, NULL, r.depart_day, r.eid);
+        VALUES (CURRENT_DATE, r.depart_day * add_monthly_rate, NULL, r.depart_day, r.eid);
 
       END IF;
 
