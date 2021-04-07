@@ -252,11 +252,6 @@ BEGIN
         RETURN NULL;
     END IF;
 
-    IF (NEW.buy_date <> CURRENT_DATE) THEN
-        RAISE EXCEPTION 'Incorrect buy date';
-        RETURN NULL;
-    END IF;
-
     IF (num_remaining_redemptions <= (SELECT num_free_registrations FROM Course_packages cp WHERE NEW.package_id = cp.package_id)) THEN
         RAISE EXCEPTION 'Number of remaining redemption must be <= initial';
         RETURN NULL;
