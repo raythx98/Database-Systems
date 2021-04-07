@@ -405,6 +405,328 @@ BEGIN
 END;
 $$ LANGUAGE PLPGSQL;
 
+-- q20
+-- register with money: refund 90% of the paid fees for a registered course if the cancellation is made at
+-- least 7 days before the day of the registered session
+-- redeem: credit an extra course session to the customer’s course package if the cancellation is made at
+-- least 7 days before the day of the registered session
+CREATE OR REPLACE PROCEDURE cancel_registration(cust_id INTEGER, launch_date Date, course_id INTEGER)
+AS $$
+DECLARE
+  session_id INTEGER;
+  date_of_session Date;
+  date_of_cancellation Date;
+  fees NUMERIC;
+
+BEGIN
+  -- does not have a registered session
+  IF (cust_id, launch_date, course_id) NOT IN (
+    SELECT R.cust_id, R.launch_date, R.course_id
+    FROM Registers R
+  ) THEN
+    RAISE EXCEPTION 'No registed session found';
+  
+  -- cust redeems a session from package
+  ELSEIF (cust_id, launch_date, course_id) IN (
+    SELECT R.cust_id, R.launch_date, R.course_id
+    FROM Redeems R
+  ) THEN
+
+      SELECT R.sid into session_id
+      FROM Redeems R
+      WHERE R.cust_id = $1
+      AND R.launch_date = $2
+      AND R.course_id = $3;
+
+      SELECT S.date into date_of_session
+      FROM Sessions S
+      WHERE S.sid = session_id
+      AND S.launch_date = $2
+      AND S.course_id = $3;
+
+      SELECT CURRENT_DATE INTO date_of_cancellation;
+
+      IF date_of_cancellation + 7 <= date_of_session THEN -- credit extra course session
+        -- update Cancels table
+        INSERT INTO Cancels(cust_id, date, refund_amt, package_credit, sid, launch_date, course_id)
+        VALUES (cust_id, date_of_cancellation, null, 1, session_id, launch_date, course_id);
+        
+      ELSEIF date_of_cancellation > date_of_session THEN -- cannot cancel after session is over
+        RAISE EXCEPTION 'Cannot cancel after session is over!';
+      
+      ELSE -- credit = 0
+        INSERT INTO Cancels(cust_id, date, refund_amt, package_credit, sid, launch_date, course_id)
+        VALUES (cust_id, date_of_cancellation, null, 0, session_id, launch_date, course_id);
+      
+      END IF;
+  
+  -- cust registered for session with money
+  ELSE
+      SELECT R.sid into session_id
+      FROM Registers R
+      WHERE R.cust_id = $1
+      AND R.launch_date = $2
+      AND R.course_id = $3;
+
+      SELECT S.date into date_of_session
+      FROM Sessions S
+      WHERE S.sid = session_id
+      AND S.launch_date = $2
+      AND S.course_id = $3;
+
+      SELECT CURRENT_DATE INTO date_of_cancellation;
+
+      SELECT O.fees INTO fees
+      FROM Offerings O
+      WHERE O.launch_date = $2
+      AND O.course_id = $3;
+
+      IF date_of_cancellation + 7 <= date_of_session THEN -- refund amount = 90%
+        INSERT INTO Cancels(cust_id, date, refund_amt, package_credit, sid, launch_date, course_id)
+        VALUES (cust_id, date_of_cancellation, 0.9*fees, null, session_id, launch_date, course_id);
+
+      ELSEIF date_of_cancellation > date_of_session THEN -- cannot cancel after session is over
+        RAISE EXCEPTION 'Cannot cancel after session is over!';
+
+      ELSE -- refund amount = 0
+        INSERT INTO Cancels(cust_id, date, refund_amt, package_credit, sid, launch_date, course_id)
+        VALUES (cust_id, date_of_cancellation, 0, null, session_id, launch_date, course_id);
+
+      END IF;
+      
+  END IF;
+END; 
+$$ LANGUAGE plpgsql;
+
+-- q21
+-- course session havent start and req valid, then update
+CREATE OR REPLACE PROCEDURE update_instructor(launch_date Date, course_id INTEGER, sid INTEGER, eid INTEGER)
+AS $$
+DECLARE
+  date_of_session Date;
+  time_of_session INTEGER;
+  date_of_update Date;
+  time_of_update INTEGER;
+
+BEGIN
+  SELECT date, start_time INTO date_of_session, time_of_session
+  FROM Sessions S
+  WHERE S.sid = $3
+  AND S.launch_date = $1
+  AND S.course_id = $2;
+
+  SELECT CURRENT_DATE INTO date_of_update;
+  SELECT EXTRACT(HOUR FROM CURRENT_TIMESTAMP) INTO time_of_update;
+
+-- need to check instructor availability
+  IF date_of_update = date_of_session THEN
+    IF time_of_update < time_of_session THEN
+      -- can update
+      UPDATE Sessions S
+      SET eid = $4
+      WHERE S.sid = $3
+      AND S.launch_date = $1
+      AND S.course_id = $2;
+
+    ELSE
+      RAISE EXCEPTION 'same date but time of update after start time of session';
+    
+    END IF;
+  
+  ELSEIF date_of_update > date_of_session THEN
+    RAISE EXCEPTION 'date of update after date of session';
+
+  ELSE
+    -- can update
+    UPDATE Sessions S
+    SET eid = $4
+    WHERE S.sid = $3
+    AND S.launch_date = $1
+    AND S.course_id = $2;
+  
+  END IF;
+END; 
+$$ LANGUAGE plpgsql;
+
+-- q22
+CREATE OR REPLACE PROCEDURE update_room(launch_date Date, course_id INTEGER, sid INTEGER, rid INTEGER)
+AS $$
+DECLARE
+  num_registered INTEGER;
+  new_seating_capacity INTEGER;
+
+  date_of_session Date;
+  time_of_session INTEGER;
+  date_of_update Date;
+  time_of_update INTEGER;
+
+BEGIN
+  SELECT COUNT(*) into num_registered
+  FROM Registers R
+  WHERE R.launch_date = $1
+  AND R.course_id = $2
+  AND R.sid = $3;
+
+  SELECT seating_capacity into new_seating_capacity
+  FROM Rooms R
+  WHERE R.rid = $4;
+
+  SELECT date, start_time INTO date_of_session, time_of_session
+  FROM Sessions S
+  WHERE S.sid = $3
+  AND S.launch_date = $1
+  AND S.course_id = $2;
+
+  SELECT CURRENT_DATE INTO date_of_update;
+  SELECT EXTRACT(HOUR FROM CURRENT_TIMESTAMP) INTO time_of_update;
+
+  IF (date_of_update = date_of_session AND time_of_update < time_of_session)
+    OR (date_of_update < date_of_session) THEN
+      IF num_registered > new_seating_capacity THEN
+        -- cannot update
+        RAISE EXCEPTION 'number of registrations exceed seating capacity of new room';
+      ELSE
+        -- can update
+        UPDATE Sessions S
+        SET rid = $4
+        WHERE S.sid = $3
+        AND S.launch_date = $1
+        AND S.course_id = $2;
+      END IF;
+  
+  ELSE
+    RAISE EXCEPTION 'course session has started, cannot update';
+
+  END IF;
+END; 
+$$ LANGUAGE plpgsql;
+
+-- q23
+CREATE OR REPLACE PROCEDURE remove_session(launch_date Date, course_id INTEGER, sid INTEGER)
+AS $$
+DECLARE
+  num_registered INTEGER;
+
+  date_of_session Date;
+  time_of_session INTEGER;
+  date_of_update Date;
+  time_of_update INTEGER;
+
+BEGIN
+-- need check if have been cancelled?
+  SELECT COUNT(*) into num_registered
+  FROM Registers R
+  WHERE R.launch_date = $1
+  AND R.course_id = $2
+  AND R.sid = $3;
+
+  SELECT date, start_time INTO date_of_session, time_of_session
+  FROM Sessions S
+  WHERE S.sid = $3
+  AND S.launch_date = $1
+  AND S.course_id = $2;
+
+  SELECT CURRENT_DATE INTO date_of_update;
+  SELECT EXTRACT(HOUR FROM CURRENT_TIMESTAMP) INTO time_of_update;
+
+  IF (date_of_update > date_of_session) OR (date_of_update = date_of_session AND time_of_update >= time_of_session) THEN
+    RAISE EXCEPTION 'course session has started, cannot remove';
+  ELSE
+    IF num_registered >= 1 THEN
+      -- cannot remove session
+      RAISE EXCEPTION 'number of registrations >= 1, cannot remove session';
+    ELSE
+      -- can remove session
+      -- do i need a trigger here? hmm
+      DELETE FROM Sessions S
+      WHERE S.launch_date = $1
+      AND S.course_id = $2
+      AND S.sid = $3;
+    END IF;
+  END IF;
+END; 
+$$ LANGUAGE plpgsql;
+
+-- q24
+CREATE OR REPLACE PROCEDURE add_session(launch_date Date, course_id INTEGER, sid INTEGER, date Date, start_time INTEGER, eid INTEGER, rid INTEGER)
+AS $$
+DECLARE
+  registration_deadline Date;
+  date_of_addition Date;
+
+BEGIN
+  SELECT O.registration_deadline INTO registration_deadline
+  FROM Sessions S, Offerings O
+  WHERE S.launch_date = O.launch_date
+  AND S.course_id = O.course_id
+  AND S.sid = $3;
+
+  SELECT CURRENT_DATE INTO date_of_addition;
+
+  IF date_of_addition > registration_deadline THEN
+    RAISE EXCEPTION 'course offering registration deadline is over';
+  ELSE
+    -- can add session
+    INSERT INTO Sessions(sid, date, end_time, start_time, launch_date, course_id, rid, eid)
+    VALUES ($3, $4, null, $5, $1, $2, $7, $6);
+  END IF;
+
+END; 
+$$ LANGUAGE plpgsql;
+
+-- q25
+
+-- q27
+ -- top N packages
+-- DESCENDING ORDER OF NUM OF PACKAGES
+-- DESCENDING ORDER OF PRICE
+CREATE OR REPLACE FUNCTION top_packages(IN N INTEGER)
+RETURNS TABLE (
+  package_id INTEGER,
+  num_free_registrations INTEGER,
+  price NUMERIC,
+  sale_start_date Date,
+  sale_end_date Date,
+  num_of_packages_sold INTEGER
+) AS $$
+DECLARE
+  curs CURSOR FOR (
+    SELECT C.package_id, C.num_free_registrations, C.price, C.sale_start_date, C.sale_end_date, COUNT(B.cust_id) as num_of_cust
+    FROM Buys B, Course_packages C
+    WHERE B.package_id = C.package_id
+    GROUP BY C.package_id
+    ORDER BY COUNT(B.cust_id) desc, C.price desc
+  );
+  count INTEGER; -- keep count of number of pakages
+  prev_package_num_of_cust INTEGER; -- keep track of prev package' sold amount so if same, can add even if count >= N
+  r RECORD;
+
+BEGIN
+
+  prev_package_num_of_cust := -1;
+  count := 0;
+  OPEN curs;
+  
+  LOOP
+    FETCH curs INTO r;
+    EXIT WHEN NOT FOUND;
+
+    -- exit loop when already have more than N records and the next record has lower sales
+    EXIT WHEN count >= N AND r.num_of_cust <> prev_package_num_of_cust;
+
+    package_id := r.package_id;
+    num_free_registrations := r.num_free_registrations;
+    price := r.price;
+    sale_start_date := r.sale_start_date;
+    sale_end_date := r.sale_end_date;
+    num_of_packages_sold := r.num_of_cust;
+    RETURN NEXT;
+    count := count + 1;
+    prev_package_num_of_cust := r.num_of_cust;
+  END LOOP;
+  CLOSE curs;
+END; 
+$$ LANGUAGE plpgsql;
 
 -- Get course packages
 create or replace function get_my_course_package(cust_id integer)
@@ -702,6 +1024,3 @@ begin
 end; 
 
 $$ Language plpgsql;
-       
-
-        
