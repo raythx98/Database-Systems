@@ -727,3 +727,300 @@ BEGIN
   CLOSE curs;
 END; 
 $$ LANGUAGE plpgsql;
+
+-- Get course packages
+create or replace function get_my_course_package(cust_id integer)
+returns json
+as $$
+declare
+    input_id integer := cust_id;
+begin
+    return (
+        with cte as (
+        select *
+        from Redeems R join Sessions S on (R.sid = S.sid and R.launch_date = S.launch_date and R.course_id = S.course_id)
+        where R.cust_id = input_id
+        order by S.date, S.start_time asc
+    )
+   
+    select json_build_object('package_name', package_name, 'purchase_date', purchase_date, 
+    'price', price, 'num_free_sessions', num_free_sessions, 
+    'num_redemptions_left', num_free_sessions - (select count(*) from cte), 
+    'redeemed_sessions', (select json_agg(cte) from cte))
+    from (
+        select 
+            P.name as package_name, 
+            B.buy_date as purchase_date,
+            P.price as price,
+            P.num_free_registrations as num_free_sessions
+        from Course_packages P join Buys B on (P.package_id = B.package_id) 
+        join Redeems R on (B.cust_id = R.cust_id) 
+        where B.cust_id = input_id
+    ) as X
+    );
+end;
+$$ Language plpgsql; 
+
+
+
+
+
+-- Get available course offerings
+create or replace function get_available_course_offerings()
+returns TABLE(course_title TEXT, course_area TEXT, start_date DATE, 
+end_date DATE, reg_deadline DATE, course_fees NUMERIC, remaining_seats INT) 
+AS $$
+declare
+    curs cursor for (
+        select 
+            title as course_title,
+            name as course_area,
+            O.start_date as begin_date,
+            O.end_date as final_date,
+            O.registration_deadline as reg_deadline,
+            O.fees as course_fees,
+            O.seating_capacity,
+            C.course_id,
+            O.launch_date
+        from 
+            Offerings O join Courses C on (O.course_id = C.course_id)
+        where current_date + 10 < reg_deadline
+        order by reg_deadline, title asc
+    );
+    r record;
+begin
+    open curs;
+    loop 
+        fetch curs into r;
+        exit when not found;
+        course_title := r.course_title;
+        course_area := r.course_area;
+        start_date := r.begin_date;
+        end_date := r.final_date;
+        reg_deadline := r.reg_deadline;
+        course_fees := r.course_fees;
+        remaining_seats := r.seating_capacity - (
+            select count(*)
+            from 
+                Sessions S join Rooms Ro on (S.rid = Ro.rid)
+                join Offerings O on (O.course_id = S.course_id and O.launch_date = S.launch_date)
+            group by O.course_id, O.launch_date
+            having O.course_id = r.course_id and O.launch_date = r.launch_date
+        );
+        return next;
+    end loop;
+    close curs;
+end;
+$$ Language plpgsql;
+
+-- Get available course sessions
+create or replace function get_available_course_sessions(input_id in integer, input_date in date)
+returns TABLE(session_date DATE, start_hour integer, instr_name TEXT, remaining_seats integer)
+AS $$
+declare
+    curs cursor for (
+        select
+            start_time,
+            I.name as instr_name,
+            S.date as session_date,
+            R.seating_capacity as session_capacity,
+            S.sid as session_id,
+            S.launch_date as offering_launch_date,
+            S.course_id as session_course_id
+        from Sessions S join Offerings O on (S.course_id = O.course_id and S.launch_date = O.launch_date)
+        join Rooms R on (R.rid = S.rid) join Instructors I on (S.eid = I.eid)
+        where O.course_id = input_id and O.launch_date = input_date
+        order by session_date, start_time asc
+    );
+    r record;
+begin   
+    open curs;
+    loop
+        fetch curs into r;
+        exit when not found;
+        session_date := r.session_date;
+        start_hour := r.start_time;
+        instr_name := r.instr_name;
+        remaining_seats := r.session_capacity - (
+            select count(*)
+            from Registers Re
+            where Re.sid = r.session_id and Re.launch_date = r.offering_launch_date and Re.course_id = r.session_course_id
+        );
+        return next;
+    end loop;
+    close curs;
+end;
+
+$$ Language plpgsql;
+
+-- register for a session
+-- likewise for redeeeming, we must make sure that have an existing
+-- package they can use.
+create or replace procedure register_session(cust_id integer, launch_date date, course_id integer, sid integer, payment_method text)
+as $$
+declare
+    date_of_transaction date;
+    card_number text;
+    package_buy_date date;
+    redeem_package_id integer;
+    input_id integer := cust_id;
+begin
+    select CURRENT_DATE into date_of_transaction;
+    if payment_method = 'credit-card' then
+    -- if customer wants to register for a session, we must make sure that
+    -- own a card first.
+        if exists (
+            select * 
+            from Owns O
+            where O.cust_id = input_id
+        )
+        then 
+        select number into card_number
+        from Owns O
+        where O.cust_id = input_id
+        limit 1;
+
+        insert into Registers (date, cust_id, number, sid, launch_date, course_id)
+        values (date_of_transaction, cust_id, card_number, sid, launch_date, course_id);
+
+        else 
+            raise exception 'Customer has no valid credit cards to make this purchase';
+        end if;
+
+    elseif payment_method = 'redeem' then
+    -- likewise for redeeeming, we must make sure that have an existing
+    -- package they can use.
+        if exists (
+            select 1
+            from Buys B 
+            where B.cust_id = input_id
+        )
+        then
+        select buy_date, package_id, number into package_buy_date, redeem_package_id, card_number
+        from Buys B
+        where B.cust_id = input_id;
+        insert into Redeems (redeem_date, buy_date, cust_id, number, package_id, sid, launch_date, course_id) 
+        values (date_of_transaction, package_buy_date, cust_id, card_number, redeem_package_id, sid, launch_date, course_id);
+        insert into Registers (date, cust_id, number, sid, launch_date, course_id)
+        values (date_of_transaction, cust_id, card_number, sid, launch_date, course_id);
+
+        else 
+            raise exception 'This customer has no available packages to redeem a sessions from';
+        end if;
+    
+    else 
+        raise exception 'type of payment_method must be one of credit-card or redeem';
+    end if;
+end;
+$$ Language plpgsql;
+
+
+
+-- get my registrations
+
+create or replace function get_my_registrations(input_id integer)
+returns TABLE(course_name TEXT, course_fees NUMERIC, session_date DATE, 
+start_hour integer, session_duration integer, instr_name TEXT)
+as $$
+    select C.title, O.fees, Ses.date as ses_date, Ses.start_time as start_hour, Ses.end_time - Ses.start_time, I.name
+    from 
+        Registers Reg join Sessions Ses on (Reg.sid = Ses.sid and Reg.launch_date = Ses.launch_date and Reg.course_id = Ses.course_id)
+        join Offerings O on (O.launch_date = Ses.launch_date and O.course_id = Ses.course_id)
+        join Courses C on (C.course_id = Ses.course_id) join Instructors I on (I.eid = Ses.eid)
+    where Reg.cust_id = input_id and current_date < ses.date + ses.end_time
+    order by ses_date, start_hour asc;
+$$ Language SQL; 
+
+
+-- update couse session
+
+create or replace procedure update_course_session(cust_id integer, course_id integer, launch_date date, new_session_num integer)
+as $$
+declare 
+    input_cust_id integer := cust_id;
+    input_course_id integer := course_id;
+    input_launch_date date := launch_date;
+begin 
+    if not exists (
+        select 1
+        from Registers Reg
+        where Reg.cust_id = input_cust_id and Reg.course_id = input_course_id
+        and Reg.launch_date = input_launch_date
+    ) then
+    raise exception 'Customer has not redeemed or registered for a session for the selected course offering';
+
+    elseif not exists (
+        select *
+        from Sessions Ses 
+        where Ses.sid = new_session_num and Ses.course_id = input_course_id 
+        and Ses.launch_date = input_launch_date
+    ) then
+    raise exception 'New session to change to does not exist';
+    else 
+        update Registers Reg
+        set sid = new_session_num
+        where Reg.cust_id = input_cust_id and Reg.course_id = input_course_id
+        and Reg.launch_date = input_launch_date;
+
+    end if;
+end;
+$$ Language plpgsql;
+
+-- view summary report
+create or replace function view_summary_report(num_months in integer)
+returns TABLE(month date, total_salary NUMERIC, total_course_package_sales NUMERIC, total_registration_fees NUMERIC, total_refunded_amount NUMERIC,total_session_redemption integer)
+as $$
+declare
+
+    counter_month integer;
+    curr_date date;
+    date_in_yyyyMM date;
+
+begin
+    counter_month := num_months;
+    select current_date into curr_date;
+    select date_trunc('month', curr_date) into date_in_yyyyMM;
+    
+    loop
+        exit when counter_month = 0;
+        month := date_in_yyyyMM;
+        total_salary := coalesce(
+            (
+            select sum(amount)
+            from Pay_slips
+            where date_in_yyyyMM = (select date_trunc('month', payment_date))
+        ), 0.0);
+        total_course_package_sales := coalesce(
+            (
+            select sum(price)
+            from Course_packages P join Buys B on (P.package_id = B.package_id)
+            where date_in_yyyyMM = (select date_trunc('month', buy_date))
+        ), 0);
+        total_registration_fees := coalesce(
+            (
+            select sum(O.fees)
+            from Registers R join Offerings O on (R.course_id = O.course_id and R.launch_date = O.launch_date)
+            where date_in_yyyyMM = (select date_trunc('month', R.date))
+        ), 0.0);
+        total_refunded_amount := coalesce(
+            (
+            select sum(C.refund_amt)
+            from Cancels C
+            where date_in_yyyyMM = (select date_trunc('month', C.date))
+        ), 0.0);
+        total_session_redemption := coalesce(
+            (
+            select count(*)
+            from Redeems R 
+            where date_in_yyyyMM = (select date_trunc('month', R.redeem_date))
+        ), 0);
+
+        return next;
+
+        date_in_yyyyMM := date_in_yyyyMM - interval '1 month';
+
+        counter_month := counter_month - 1;
+    end loop;
+end; 
+
+$$ Language plpgsql;
