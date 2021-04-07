@@ -131,7 +131,7 @@ BEGIN
             select name 
             from courses 
             where courses.course_id = input_course_id
-            ))
+            )) AND session_date <= employees.depart_date
     except
     -- instructors who cannot teach
     SELECT eid, name
@@ -140,8 +140,8 @@ BEGIN
         SELECT eid
         FROM Sessions
         WHERE (Sessions.date = session_date 
-        and (input_start_time + (SELECT duration FROM Courses WHERE courses.course_id = input_course_id)) > Sessions.start_time 
-        and input_start_time < Sessions.end_time)));
+      	and (input_start_time + (SELECT duration FROM Courses WHERE Courses.course_id = input_course_id)) > Sessions.start_time 
+      	and input_start_time < Sessions.end_time)));
 END;
 $$ LANGUAGE plpgsql;
 
