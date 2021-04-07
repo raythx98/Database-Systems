@@ -272,6 +272,17 @@ BEGIN
         RETURN NULL;
     END IF;
 
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER Owns_check_active
+BEFORE INSERT OR UPDATE ON Buys
+FOR EACH ROW EXECUTE FUNCTION check_for_active_package();
+
+CREATE OR REPLACE FUNCTION check_for_active_package() RETURNS TRIGGER AS $$
+BEGIN
+
     IF (SELECT EXISTS (SELECT 1 FROM Buys B WHERE (B.cust_id = NEW.cust_id) and (B.num_remaining_redemptions > 0))) THEN
         RAISE EXCEPTION 'Customer has an existing active package';
         RETURN NULL;
@@ -313,7 +324,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE CONSTRAINT TRIGGER Offerings_insert_trigger_deferrable
+CREATE CONSTRAINT TRIGGER match_offerings_sessions
 AFTER INSERT OR UPDATE ON Offerings
 DEFERRABLE INITIALLY DEFERRED
 FOR EACH ROW EXECUTE FUNCTION check_for_offerings_insert_deferrable();
