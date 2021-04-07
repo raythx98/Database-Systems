@@ -313,6 +313,8 @@ BEGIN
         RAISE EXCEPTION 'Course offerings with same course id must have different launch date';
         RETURN NULL;
     END IF;
+
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -325,26 +327,26 @@ CREATE OR REPLACE FUNCTION check_for_offerings_insert_deferrable() RETURNS TRIGG
 BEGIN
 
     IF (NEW.seating_capacity <> (SELECT SUM(SR.seating_capacity) FROM (Sessions natural join Rooms) as SR WHERE SR.launch_date = NEW.launch_date and SR.course_id = NEW.course_id)) THEN
-        RAISE EXCEPTION 'Seating capacity does not correspond to room capacity of sessions';
+        RAISE NOTICE 'Seating capacity does not correspond to room capacity of sessions';
         RETURN NULL;
     END IF;
 
     IF (SELECT NOT EXISTS (SELECT 1 FROM Sessions S WHERE S.launch_date = NEW.launch_date and S.course_id = NEW.course_id)) THEN
-        RAISE EXCEPTION 'Offerings should contain at least 1 session';
+        RAISE NOTICE 'Offerings should contain at least 1 session';
         RETURN NULL;
     END IF;
 
     IF (NEW.start_date <> (SELECT min(date) FROM Sessions S WHERE S.launch_date = NEW.launch_date and S.course_id = NEW.course_id)) THEN
-        RAISE EXCEPTION 'Start date does not correspond to earliest session';
+        RAISE NOTICE 'Start date does not correspond to earliest session';
         RETURN NULL;
     END IF;
 
     IF (NEW.end_date <> (SELECT max(date) FROM Sessions S WHERE S.launch_date = NEW.launch_date and S.course_id = NEW.course_id)) THEN
-        RAISE EXCEPTION 'End date does not correspond to latest session';
+        RAISE NOTICE 'End date does not correspond to latest session';
         RETURN NULL;
     END IF;
 
-    RETURN NEW;
+    RETURN NULL;
 
 END;
 $$ LANGUAGE plpgsql;
