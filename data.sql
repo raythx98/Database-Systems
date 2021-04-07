@@ -614,19 +614,19 @@ insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, r
 insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2021-01-27', 18, 17, '2020-01-05', 28, 5, 57);
 insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2020-11-26', 10, 9, '2020-02-08', 8, 5, 58);
 insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2020-06-05', 12, 9, '2020-02-08', 7, 5, 59);
-insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2021-01-13', 17, 16, '2020-01-02', 30, 5, 60);
-insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2020-07-14', 12, 11, '2020-02-06', 11, 5, 61);
-insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2021-01-06', 12, 9, '2020-02-13', 12, 6, 62);
-insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2021-03-06', 11, 10, '2020-02-15', 2, 6, 63);
-insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2021-03-27', 17, 14, '2020-01-09', 29, 6, 64);
-insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2020-08-05', 12, 9, '2020-02-13', 12, 6, 65);
-insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2021-01-13', 16, 15, '2020-01-02', 30, 6, 66);
-insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2021-02-12', 17, 14, '2020-02-13', 24, 7, 67);
-insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2020-11-25', 12, 11, '2020-01-31', 8, 7, 68);
-insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2020-06-10', 12, 9, '2020-01-01', 3, 7, 69);
-insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2020-10-31', 17, 14, '2020-02-09', 17, 8, 70);
-insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2021-02-21', 18, 15, '2020-02-21', 18, 8, 43);
-insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2020-08-02', 17, 14, '2020-02-18', 15, 8, 44);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2021-01-13', 17, 16, '2020-01-02', 30, 5, 65);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2020-07-14', 12, 11, '2020-02-06', 11, 5, 28);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2021-01-06', 12, 9, '2020-02-13', 12, 6, 28);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2021-03-06', 11, 10, '2020-02-15', 2, 6, 37);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2021-03-27', 17, 14, '2020-01-09', 29, 6, 49);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2020-08-05', 12, 9, '2020-02-13', 12, 6, 39);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2021-01-13', 16, 15, '2020-01-02', 30, 6, 26);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2021-02-12', 17, 14, '2020-02-13', 24, 7, 59);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2020-11-25', 12, 11, '2020-01-31', 8, 7, 61);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2020-06-10', 12, 9, '2020-01-01', 3, 7, 12);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2020-10-31', 17, 14, '2020-02-09', 17, 8, 57);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2021-02-21', 18, 15, '2020-02-21', 18, 8, 3);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2020-08-02', 17, 14, '2020-02-18', 15, 8, 42);
 
 
 insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date, course_id) values (1, '2020-04-15', 110.7, NULL, 1, '2020-02-15', 2);
