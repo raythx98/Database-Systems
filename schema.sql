@@ -277,7 +277,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER Owns_check_active
-BEFORE INSERT OR UPDATE ON Buys
+BEFORE INSERT ON Buys
 FOR EACH ROW EXECUTE FUNCTION check_for_active_package();
 
 CREATE OR REPLACE FUNCTION check_for_active_package() RETURNS TRIGGER AS $$
@@ -828,6 +828,27 @@ BEGIN
     AND NEW.sid <> sid
   );
 
+  -- Instructor must be specialised in the area
+  IF NEW.eid NOT IN (
+    SELECT I.eid
+    FROM Courses C, Instructors I
+    WHERE C.name = I.name
+    AND C.course_id = NEW.course_id
+  ) THEN
+    RAISE NOTICE 'Instructor is not specialized in that course area';
+    RETURN NULL;
+  END IF;
+
+  -- duration must match Courses table
+  IF (NEW.end_time - NEW.start_time) <> (
+    SELECT C.duration
+    FROM Courses C
+    WHERE C.course_id = NEW.course_id
+  ) THEN
+    RAISE NOTICE 'duration of session must match duration of course';
+    RETURN NULL;
+  END IF;
+
   -- Instructor must still be with the company during the session date.
   IF NEW.eid NOT IN (
     SELECT E.eid
@@ -860,7 +881,7 @@ BEGIN
   WHERE S.eid = NEW.eid
   AND S.date = NEW.date
   AND NEW.sid <> sid;
-
+  
   SELECT COUNT(*) INTO num_sessions_satisfy_constraint -- number of sessions that satisfy constraint
   FROM Sessions S
   WHERE S.eid = NEW.eid
@@ -879,7 +900,7 @@ BEGIN
     SELECT date, rid
     FROM Sessions
   ) THEN
-    -- update offerings start date
+    -- update offerings start date & deadline
     IF NEW.date < (
       SELECT start_date
       FROM Offerings
@@ -887,11 +908,11 @@ BEGIN
       AND course_id = NEW.course_id
     ) THEN
       UPDATE Offerings
-      SET start_date = NEW.date
+      SET start_date = NEW.date, registration_deadline = NEW.date - 10
       WHERE launch_date = NEW.launch_date
       AND course_id = NEW.course_id;
     END IF;
-
+    
     -- update offerings end date
     IF NEW.date > (
       SELECT end_date
@@ -913,8 +934,11 @@ BEGIN
 
     RETURN NEW;
   ELSE
-    IF (NEW.start_time < ALL (SELECT start_time FROM StartTimeTable) AND NEW.end_time < ALL (SELECT start_time FROM StartTimeTable)) OR
-      (NEW.start_time > ALL (SELECT end_time FROM EndTimeTable) AND NEW.end_time > ALL (SELECT end_time FROM EndTimeTable)) THEN -- room used after this session
+    IF NOT (NEW.start_time < ALL (SELECT start_time FROM StartTimeTable) AND NEW.end_time < ALL (SELECT start_time FROM StartTimeTable)) OR
+      (NEW.start_time > ALL (SELECT end_time FROM EndTimeTable) AND NEW.end_time > ALL (SELECT end_time FROM EndTimeTable)) THEN
+      RAISE NOTICE 'room is occupied at that time';
+      RETURN NULL;
+    ELSE -- room used after this session
       -- update offerings start date
       IF NEW.date < (
         SELECT start_date
@@ -923,11 +947,11 @@ BEGIN
         AND course_id = NEW.course_id
       ) THEN
         UPDATE Offerings
-        SET start_date = NEW.date
+        SET start_date = NEW.date, registration_deadline = NEW.date - 10
         WHERE launch_date = NEW.launch_date
         AND course_id = NEW.course_id;
       END IF;
-
+      
       -- update offerings end date
       IF NEW.date > (
         SELECT end_date
@@ -948,9 +972,6 @@ BEGIN
       AND course_id = NEW.course_id;
 
       RETURN NEW; -- need to change offerings
-    ELSE -- room used during this session
-      RAISE NOTICE 'room is occupied at that time';
-      RETURN NULL;
     END IF;
   END IF;
 END;
