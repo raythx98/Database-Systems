@@ -365,6 +365,241 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+<<<<<<< HEAD
+
+create TRIGGER check_update_sessions_capacity
+before update
+on Registers
+for each row 
+execute function check_update_ses_capacity();
+
+create or replace function check_update_ses_capacity()
+returns trigger as
+$$
+declare
+    session_capacity integer;
+    seats_taken integer;
+begin
+    select seating_capacity into session_capacity
+    from Sessions Ses join Rooms R on Ses.rid = R.rid
+    where Ses.sid = new.sid and Ses.course_id = new.course_id
+    and Ses.launch_date = new.launch_date;
+
+    select count(*) into seats_taken
+    from Registers R
+    where (R.sid = new.sid and R.course_id = new.course_id and R.launch_date = new.launch_date);
+
+    if seats_taken + 1 > session_capacity then 
+        raise notice 'No more seats left for the selected session';
+        return null;
+    end if;
+
+    return new;
+
+end;
+$$ Language plpgsql;
+
+
+create TRIGGER check_update_sessions_date
+before update
+on Registers
+for each row 
+execute function check_update_ses_date();
+
+
+create or replace function check_update_ses_date()
+returns trigger as
+$$
+declare
+    session_date date;
+begin
+    select S.date into session_date
+    from Sessions S
+    where S.sid = new.sid and S.course_id = new.course_id and S.launch_date = new.launch_date;
+
+    if session_date < new.date then 
+        raise notice 'Cannot change session to a session that is already over!';
+        return null;
+    end if;
+
+    return new;
+
+end;
+$$ Language plpgsql;
+
+
+create TRIGGER check_transaction_for_register_already_registered
+before insert 
+on Registers
+for each row
+execute function check_register_duplicate_registration();
+
+
+create or replace function check_register_duplicate_registration()
+returns trigger as
+$$    
+begin
+    if exists (
+        select 1
+        from Registers
+        where cust_id = new.cust_id and number = new.number and sid = new.sid
+        and launch_date = new.launch_date and course_id = new.course_id
+    ) 
+    then raise notice 'Already registered for course on an earlier date';
+    return null;
+    
+    end if;
+        
+    return new;
+
+end;
+$$ Language plpgsql;
+
+
+
+create TRIGGER check_transaction_for_register_capacity
+before insert 
+on Registers
+for each row
+execute function check_register_capacity();
+
+create or replace function check_register_capacity()
+returns trigger as
+$$
+declare 
+    session_capacity integer;
+    seats_filled integer;
+
+begin
+    select R.seating_capacity into session_capacity
+    from Rooms R join Sessions S on (R.rid = S.rid)
+    where (S.sid = new.sid and S.course_id = new.course_id and S.launch_date = new.launch_date);
+
+    select count(*) into seats_filled
+    from Registers R
+    where (R.sid = new.sid and R.course_id = new.course_id and R.launch_date = new.launch_date);
+
+    if seats_filled + 1 > session_capacity then 
+        raise notice 'Session is fully subscribed, no more available seats';
+        return null;
+    end if;
+
+    return new;
+end;
+$$ Language plpgsql;
+
+
+
+create TRIGGER check_transaction_for_register_deadline
+before insert 
+on Registers
+for each row
+execute function check_register_deadline();
+
+
+create or replace function check_register_deadline()
+returns trigger as
+$$
+declare
+    offering_reg_deadline date;
+begin
+    select registration_deadline into offering_reg_deadline
+    from Offerings O
+    where O.launch_date = new.launch_date and O.course_id = new.course_id;
+
+    if new.date > offering_reg_deadline - 10  then
+        raise notice 'Can only register for a session 10 days before its registration deadline';
+        return null;
+    end if;
+    return new;
+end;
+$$ Language plpgsql;
+
+
+create TRIGGER check_transaction_for_redeem_balance
+before insert 
+on Redeems
+for each row
+execute function check_redeem_balance();
+
+create or replace function check_redeem_balance()
+returns trigger as
+$$
+declare 
+    redemptions_left integer;
+
+begin
+    select num_remaining_redemptions into redemptions_left
+    from Buys
+    where cust_id = new.cust_id;
+
+    if redemptions_left > 0 then
+        update Buys B
+        set num_remaining_redemptions = redemptions_left - 1
+        where B.buy_date = new.buy_date and B.cust_id = new.cust_id and
+        B.number = new.number and B.package_id = new.package_id;
+
+        return new;
+    
+    else
+        raise notice 'No more redemptions left';
+        return null;
+    end if;
+
+end;
+$$ Language plpgsql;
+
+
+create TRIGGER check_transaction_for_redeem_date
+before insert 
+on Redeems
+for each row
+execute function check_redeem_date();
+
+create or replace function check_redeem_date()
+returns trigger as
+$$
+declare 
+    ses_start_date date;
+    reg_deadline date
+
+begin
+    select S.date into ses_start_date 
+    from Sessions S 
+    where S.sid = new.sid and S.course_id = new.course_id and S.launch_date = new.launch_date;
+
+    select O.registration_deadline into reg_deadline
+    from Offerings O
+    where O.launch_date = new.launch_date and O.course_id = new.course_id;
+
+    if new.redeem_date > ses_start_date then
+        raise notice 'Cannot redeem for a session that is already over';
+        return null;
+
+    if new.redeem_date > reg_deadline then
+        raise notice 'Cannot redeem for a session 10 days before the offering registration deadline';
+        return null;
+    
+    else
+        update Buys B
+        set num_remaining_redemptions = redemptions_left - 1
+        where B.buy_date = new.buy_date and B.cust_id = new.cust_id and
+        B.number = new.number and B.package_id = new.package_id;
+        return new;
+    end if;
+
+end;
+$$ Language plpgsql;
+
+
+create TRIGGER check_transaction_for_redeem_date
+before insert 
+on Redeems
+for each row
+execute function check_redeem_date();
+
+
+=======
 CREATE OR REPLACE FUNCTION redeems_trigger_func() RETURNS TRIGGER AS $$ 
 BEGIN
     IF (NEW.redeem_date > (SELECT date FROM Sessions s WHERE s.sid = NEW.sid)) THEN -- redeem after session
@@ -386,3 +621,4 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER redeems_trigger
 BEFORE INSERT ON Redeems
 FOR EACH ROW EXECUTE FUNCTION redeems_trigger_func();
+>>>>>>> master
