@@ -126,10 +126,10 @@ CREATE TABLE Offerings (
   course_id INTEGER REFERENCES Courses
     ON DELETE CASCADE,
   PRIMARY KEY(launch_date, course_id),
-  CHECK (start_date <= end_date AND launch_date <= start_date),
-  CHECK (registration_deadline >= launch_date AND registration_deadline <= end_date),
-  CHECK (target_number_registrations <= seating_capacity),
-  CHECK (registration_deadline <= start_date - 10)
+  CONSTRAINT a1 CHECK (start_date <= end_date AND launch_date <= start_date),
+  CONSTRAINT b2 CHECK(registration_deadline >= launch_date AND registration_deadline <= end_date),
+  CONSTRAINT c3 CHECK(target_number_registrations <= seating_capacity),
+  CONSTRAINT d4 CHECK(registration_deadline = start_date - 10)
 );
 
 CREATE TABLE Sessions (
@@ -313,6 +313,8 @@ BEGIN
         RAISE EXCEPTION 'Course offerings with same course id must have different launch date';
         RETURN NULL;
     END IF;
+
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -324,7 +326,7 @@ FOR EACH ROW EXECUTE FUNCTION check_for_offerings_insert_deferrable();
 CREATE OR REPLACE FUNCTION check_for_offerings_insert_deferrable() RETURNS TRIGGER AS $$
 BEGIN
 
-    IF (NEW.seating_capacity <> (SELECT SUM(SR.seating_capacity) FROM (Sessions natural join Rooms) as SR WHERE SR.launch_date = NEW.launch_date and SR.course_id = NEW.course_id)) THEN
+    IF (NEW.seating_capacity <> (SELECT COALESCE(SUM(SR.seating_capacity), 0) FROM (Sessions natural join Rooms) as SR WHERE SR.launch_date = NEW.launch_date and SR.course_id = NEW.course_id)) THEN
         RAISE EXCEPTION 'Seating capacity does not correspond to room capacity of sessions';
         RETURN NULL;
     END IF;
@@ -334,15 +336,17 @@ BEGIN
         RETURN NULL;
     END IF;
 
-    IF (NEW.start_date <> (SELECT min(date) FROM Sessions S WHERE S.launch_date = NEW.launch_date and S.course_id = NEW.course_id)) THEN
-        RAISE EXCEPTION 'Start date does not correspond to earliest session';
+    IF (NEW.start_date <> (SELECT COALESCE(min(date), date'1000-01-01') FROM Sessions S WHERE S.launch_date = NEW.launch_date and S.course_id = NEW.course_id)) THEN
+        RAISE EXCEPTION 'Start date does not correspond to earliest session, launch date: %, course id: %', NEW.launch_date, NEW.course_id;
         RETURN NULL;
     END IF;
 
-    IF (NEW.end_date <> (SELECT max(date) FROM Sessions S WHERE S.launch_date = NEW.launch_date and S.course_id = NEW.course_id)) THEN
-        RAISE EXCEPTION 'End date does not correspond to latest session';
+    IF (NEW.end_date <> (SELECT COALESCE(max(date), date'1000-01-01') FROM Sessions S WHERE S.launch_date = NEW.launch_date and S.course_id = NEW.course_id)) THEN
+        RAISE EXCEPTION 'End date does not correspond to latest session, launch date: %, course id: %', NEW.launch_date, NEW.course_id;
         RETURN NULL;
     END IF;
+
+    RETURN NULL;
 
 END;
 $$ LANGUAGE plpgsql;
@@ -361,6 +365,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+<<<<<<< HEAD
 
 create TRIGGER check_update_sessions_capacity
 before update
@@ -594,3 +599,26 @@ for each row
 execute function check_redeem_date();
 
 
+=======
+CREATE OR REPLACE FUNCTION redeems_trigger_func() RETURNS TRIGGER AS $$ 
+BEGIN
+    IF (NEW.redeem_date > (SELECT date FROM Sessions s WHERE s.sid = NEW.sid)) THEN -- redeem after session
+        raise exception 'Redeem date is after session date.';
+        RETURN NULL; -- dont insert
+        
+    ELSEIF (NEW.buy_date < (SELECT sale_start_date FROM Course_packages cp where cp.package_id = NEW.package_id) 
+    or NEW.buy_date > (SELECT sale_end_date FROM Course_packages cp where cp.package_id = NEW.package_id)) THEN -- i can delete this right
+        raise exception 'Buy date is not during course package sales';
+        RETURN NULL; -- dont insert
+    ELSE
+        INSERT INTO Registers (date, cust_id, number, sid, launch_date, course_id) 
+        values (NEW.redeem_date, NEW.cust_id, NEW.number, NEW.sid, NEW.launch_date, NEW.course_id);
+        RETURN NEW;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER redeems_trigger
+BEFORE INSERT ON Redeems
+FOR EACH ROW EXECUTE FUNCTION redeems_trigger_func();
+>>>>>>> master
