@@ -329,9 +329,11 @@ BEGIN
 
 			IF (rrr in (select eid from instructors where name in (select name from courses where courses.course_id = c_id))) THEN
 				IF (rrr not in (SELECT eid FROM Sessions WHERE (Sessions.date = date_slice and (hour_slice + (SELECT duration FROM Courses WHERE Courses.course_id = c_id)) > Sessions.start_time and hour_slice < Sessions.end_time))) THEN
-					chosen := rrr;
+					IF (rrr in (select eid from Employees e where date_slice <= e.depart_date)) THEN
+            chosen := rrr;
+          END IF;
+          RETURN;
 				END IF;
-				RETURN;
 			END IF;
 		END LOOP;
 		CLOSE curs_FI;
