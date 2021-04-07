@@ -209,3 +209,154 @@ CREATE TABLE Pay_slips (
   PRIMARY KEY(payment_date, eid),
   CONSTRAINT null_check CHECK((num_work_hours IS NOT null AND num_work_days IS NULL) OR (num_work_hours IS null AND num_work_days IS NOT NULL))
 );
+
+
+
+
+
+
+
+
+
+
+
+
+-- ####################################
+-- ####          TRIGGERS          ####
+-- ####################################
+
+CREATE TRIGGER Owns_insert_trigger
+BEFORE INSERT OR UPDATE ON Buys
+FOR EACH ROW EXECUTE FUNCTION check_for_owns_insert();
+
+CREATE OR REPLACE FUNCTION check_for_owns_insert() RETURNS TRIGGER AS $$
+BEGIN
+
+    IF (NEW.cust_id not in (SELECT cust_id FROM Customers)) THEN
+        RAISE EXCEPTION 'Customer does not exist';
+        RETURN NULL;
+    END IF;
+
+    IF (NEW.number not in (SELECT number FROM Credit_cards)) THEN
+        RAISE EXCEPTION 'Card does not exist';
+        RETURN NULL;
+    END IF;
+
+    IF (NEW.package_id not in (SELECT cp.package_id FROM Course_packages cp)) THEN
+        RAISE EXCEPTION 'Package does not exist';
+        RETURN NULL;
+    END IF;
+
+    IF (NEW.cust_id not in (SELECT cust_id FROM Owns)) THEN
+        RAISE EXCEPTION 'Customer does not exist';
+        RETURN NULL;
+    END IF;
+
+    IF (NEW.buy_date <> CURRENT_DATE) THEN
+        RAISE EXCEPTION 'Incorrect buy date';
+        RETURN NULL;
+    END IF;
+
+    IF (num_remaining_redemptions <= (SELECT num_free_registrations FROM Course_packages cp WHERE NEW.package_id = cp.package_id)) THEN
+        RAISE EXCEPTION 'Number of remaining redemption must be <= initial';
+        RETURN NULL;
+    END IF;
+
+    IF (NEW.buy_date <= (SELECT expiry_date FROM Credit_cards C WHERE NEW.number = C.number)) THEN
+        RAISE EXCEPTION 'Credit card has expired';
+        RETURN NULL;
+    END IF;
+
+    IF (NEW.buy_date > (SELECT sale_end_date FROM Course_packages cp WHERE NEW.package_id = cp.package_id)) THEN
+        RAISE EXCEPTION 'Sale of package has ended';
+        RETURN NULL;
+    END IF;
+
+    IF (NEW.buy_date < (SELECT sale_start_date FROM Course_packages cp WHERE NEW.package_id = cp.package_id)) THEN
+        RAISE EXCEPTION 'Sale of package has yet to start';
+        RETURN NULL;
+    END IF;
+
+    IF (SELECT EXISTS (SELECT 1 FROM Buys B WHERE (B.cust_id = NEW.cust_id) and (B.num_remaining_redemptions > 0))) THEN
+        RAISE EXCEPTION 'Customer has an existing active package';
+        RETURN NULL;
+    END IF;
+
+    IF (SELECT EXISTS (SELECT 1 FROM (Redeems natural join Sessions) as RS WHERE (RS.cust_id = NEW.cust_id) and (RS.date >= NEW.buy_date + 7))) THEN
+        RAISE EXCEPTION 'Customer has an existing partially active package';
+        RETURN NULL;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER Owns_delete_trigger
+BEFORE DELETE ON Buys
+FOR EACH ROW EXECUTE FUNCTION check_for_owns_delete();
+
+CREATE OR REPLACE FUNCTION check_for_owns_delete() RETURNS TRIGGER AS $$
+BEGIN
+    RAISE EXCEPTION 'Entries should not be deleted for archival purposes';
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER Offerings_insert_trigger
+BEFORE INSERT OR UPDATE ON Offerings
+FOR EACH ROW EXECUTE FUNCTION check_for_offerings_insert();
+
+CREATE OR REPLACE FUNCTION check_for_offerings_insert() RETURNS TRIGGER AS $$
+BEGIN
+
+    IF (SELECT EXISTS (SELECT 1 FROM Offerings O WHERE (O.launch_date = NEW.launch_date) and (O.course_id = NEW.course_id))) THEN
+        RAISE EXCEPTION 'Course offerings with same course id must have different launch date';
+        RETURN NULL;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE CONSTRAINT TRIGGER Offerings_insert_trigger_deferrable
+AFTER INSERT OR UPDATE ON Offerings
+DEFERRABLE INITIALLY DEFERRED
+FOR EACH ROW EXECUTE FUNCTION check_for_offerings_insert_deferrable();
+
+CREATE OR REPLACE FUNCTION check_for_offerings_insert_deferrable() RETURNS TRIGGER AS $$
+BEGIN
+
+    IF (NEW.seating_capacity <> (SELECT SUM(SR.seating_capacity) FROM (Sessions natural join Rooms) as SR WHERE SR.launch_date = NEW.launch_date and SR.course_id = NEW.course_id)) THEN
+        RAISE EXCEPTION 'Seating capacity does not correspond to room capacity of sessions';
+        RETURN NULL;
+    END IF;
+
+    IF (SELECT NOT EXISTS (SELECT 1 FROM Sessions S WHERE S.launch_date = NEW.launch_date and S.course_id = NEW.course_id)) THEN
+        RAISE EXCEPTION 'Offerings should contain at least 1 session';
+        RETURN NULL;
+    END IF;
+
+    IF (NEW.start_date <> (SELECT min(date) FROM Sessions S WHERE S.launch_date = NEW.launch_date and S.course_id = NEW.course_id)) THEN
+        RAISE EXCEPTION 'Start date does not correspond to earliest session';
+        RETURN NULL;
+    END IF;
+
+    IF (NEW.end_date <> (SELECT max(date) FROM Sessions S WHERE S.launch_date = NEW.launch_date and S.course_id = NEW.course_id)) THEN
+        RAISE EXCEPTION 'End date does not correspond to latest session';
+        RETURN NULL;
+    END IF;
+
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER Offerings_delete_trigger
+BEFORE DELETE ON Offerings
+FOR EACH ROW EXECUTE FUNCTION check_for_offerings_delete();
+
+CREATE OR REPLACE FUNCTION check_for_offerings_delete() RETURNS TRIGGER AS $$
+BEGIN
+    IF (SELECT NOT EXISTS (SELECT 1 FROM Sessions S WHERE S.launch_date = OLD.launch_date and S.course_id = OLD.course_id)) THEN
+        RETURN OLD;
+    END IF;
+    RAISE EXCEPTION 'There is still 1 session under this course offering';
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
