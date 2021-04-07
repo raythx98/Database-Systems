@@ -344,6 +344,8 @@ BEGIN
         RETURN NULL;
     END IF;
 
+    RETURN NEW;
+
 END;
 $$ LANGUAGE plpgsql;
 
