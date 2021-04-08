@@ -1,3 +1,5 @@
+
+BEGIN TRANSACTION;
 DROP TABLE IF EXISTS Pay_slips, Redeems, Buys, Registers, Cancels, Sessions, Offerings, Course_packages, Courses, Rooms, Owns, Credit_cards,
 Customers, Administrators, Full_time_instructors, Part_time_instructors, Instructors, Course_areas, Managers, Full_time_Emp, Part_time_Emp, Employees CASCADE;
 
@@ -129,7 +131,8 @@ CREATE TABLE Offerings (
   CONSTRAINT launch_before_start_check CHECK (launch_date <= start_date),
   CONSTRAINT deadline_after_launch_check CHECK(registration_deadline >= launch_date),
   CONSTRAINT deadline_before_end_check CHECK(registration_deadline <= end_date),
-  CONSTRAINT deadline_before_start_check CHECK(registration_deadline <= start_date - 10)
+  CONSTRAINT deadline_before_start_check CHECK(registration_deadline <= start_date - 10),
+  CONSTRAINT start_before_end_check CHECK (start_date <= end_date)
 );
 
 CREATE TABLE Sessions (
@@ -373,39 +376,6 @@ BEGIN
     END IF;
 
     RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE CONSTRAINT TRIGGER match_offerings_sessions
-AFTER INSERT OR UPDATE ON Offerings
-DEFERRABLE INITIALLY DEFERRED
-FOR EACH ROW EXECUTE FUNCTION check_for_offerings_insert_deferrable();
-
-CREATE OR REPLACE FUNCTION check_for_offerings_insert_deferrable() RETURNS TRIGGER AS $$
-BEGIN
-
-    -- IF (NEW.seating_capacity <> (SELECT COALESCE(SUM(SR.seating_capacity), 0) FROM (Sessions natural join Rooms) as SR WHERE SR.launch_date = NEW.launch_date and SR.course_id = NEW.course_id)) THEN
-    --     RAISE EXCEPTION 'Seating capacity does not correspond to room capacity of sessions, launch date: %, course id: %', NEW.launch_date, NEW.course_id;
-    --     RETURN NULL;
-    -- END IF;
-
-    IF (SELECT NOT EXISTS (SELECT 1 FROM Sessions S WHERE S.launch_date = NEW.launch_date and S.course_id = NEW.course_id)) THEN
-        RAISE EXCEPTION 'Offerings should contain at least 1 session';
-        RETURN NULL;
-    END IF;
-
-    -- IF (NEW.start_date <> (SELECT COALESCE(min(date), date'1000-01-01') FROM Sessions S WHERE S.launch_date = NEW.launch_date and S.course_id = NEW.course_id)) THEN
-    --     RAISE EXCEPTION 'Start date does not correspond to earliest session, launch date: %, course id: %', NEW.launch_date, NEW.course_id;
-    --     RETURN NULL;
-    -- END IF;
-
-    -- IF (NEW.end_date <> (SELECT COALESCE(max(date), date'1000-01-01') FROM Sessions S WHERE S.launch_date = NEW.launch_date and S.course_id = NEW.course_id)) THEN
-    --     RAISE EXCEPTION 'End date does not correspond to latest session, launch date: %, course id: %', NEW.launch_date, NEW.course_id;
-    --     RETURN NULL;
-    -- END IF;
-
-    RETURN NULL;
-
 END;
 $$ LANGUAGE plpgsql;
 
@@ -657,14 +627,6 @@ begin
 
 end;
 $$ Language plpgsql;
-
-
-create TRIGGER check_transaction_for_redeem_date
-before insert 
-on Redeems
-for each row
-execute function check_redeem_date();
-
 
 CREATE OR REPLACE FUNCTION redeems_trigger_func() RETURNS TRIGGER AS $$ 
 BEGIN
@@ -1168,3 +1130,5 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+
+COMMIT;
