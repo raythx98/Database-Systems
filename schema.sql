@@ -319,12 +319,12 @@ FOR EACH ROW EXECUTE FUNCTION check_for_active_package();
 CREATE OR REPLACE FUNCTION check_for_active_package() RETURNS TRIGGER AS $$
 BEGIN
 
-    IF (SELECT EXISTS (SELECT 1 FROM Buys B WHERE (B.cust_id = NEW.cust_id) and (B.num_remaining_redemptions > 0))) THEN
+    IF (SELECT EXISTS (SELECT 1 FROM Buys B WHERE (B.cust_id = NEW.cust_id) and (B.number = NEW.number) and (B.num_remaining_redemptions > 0))) THEN
         RAISE EXCEPTION 'Customer has an existing active package';
         RETURN NULL;
     END IF;
 
-    IF (SELECT EXISTS (SELECT 1 FROM (Redeems natural join Sessions) as RS WHERE (RS.cust_id = NEW.cust_id) and (RS.date >= NEW.buy_date + 7))) THEN
+    IF (SELECT EXISTS (SELECT 1 FROM (Redeems natural join Sessions) as RS WHERE (RS.cust_id = NEW.cust_id) and (B.number = NEW.number) and (RS.date >= NEW.buy_date + 7))) THEN
         RAISE EXCEPTION 'Customer has an existing partially active package';
         RETURN NULL;
     END IF;
