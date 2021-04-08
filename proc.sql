@@ -240,7 +240,7 @@ $$ LANGUAGE PLPGSQL;
 
 -- Function 10
 -- Example call: 
--- call add_course_offering(3, 300, date'2021-04-13', date'2021-04-16', 85, '{{2021-04-26, 9, 2}, {2021-04-27, 9, 3}, {2021-04-28, 9, 4}}');
+-- call add_course_offering(3, 300, date'2021-04-13', date'2021-04-15', 100, 85, '{{2021-04-26, 9, 2}, {2021-04-27, 9, 3}, {2021-04-28, 9, 4}}');
 -- Session is a 2D array where each nested array contains {<Session date>, <Session start hour>, <Room identifier>}
 CREATE OR REPLACE PROCEDURE add_course_offering 
 (c_id INTEGER, course_fees NUMERIC, launch DATE, 
