@@ -992,7 +992,7 @@ BEGIN
     RETURN NEW;
   ELSE
     IF NOT (NEW.start_time < ALL (SELECT start_time FROM StartTimeTable) AND NEW.end_time < ALL (SELECT start_time FROM StartTimeTable)) OR
-      (NEW.start_time > ALL (SELECT end_time FROM EndTimeTable) AND NEW.end_time > ALL (SELECT end_time FROM EndTimeTable)) THEN
+      NOT (NEW.start_time > ALL (SELECT end_time FROM EndTimeTable) AND NEW.end_time > ALL (SELECT end_time FROM EndTimeTable)) THEN
       RAISE exception 'room is occupied at that time';
       RETURN NULL;
     ELSE -- room used after this session
