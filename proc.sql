@@ -244,14 +244,11 @@ $$ LANGUAGE PLPGSQL;
 -- Session is a 2D array where each nested array contains {<Session date>, <Session start hour>, <Room identifier>}
 CREATE OR REPLACE PROCEDURE add_course_offering 
 (c_id INTEGER, course_fees NUMERIC, launch DATE, 
-reg_deadline DATE, admin_eid INTEGER, sessions varchar[][]) AS $$
+reg_deadline DATE, target_reg INTEGER, admin_eid INTEGER, sessions varchar[][]) AS $$
 
 DECLARE 
 	hours INTEGER[];
-	m   varchar[];
-	start_date_iter DATE;
-	end_date_iter DATE;
-	seating_capacity_iter INTEGER;
+	m varchar[];
 	course_duration INTEGER;
 	curs_FI CURSOR FOR (SELECT eid FROM instructors ORDER BY eid asc);
 	
@@ -275,44 +272,19 @@ BEGIN
 	END IF;
 	
 	course_duration := (SELECT duration FROM Courses WHERE course_id = c_id);
-	start_date_iter := sessions[1][1];
-	end_date_iter := sessions[1][1];
-	seating_capacity_iter := 0;
-
-	FOREACH m SLICE 1 IN ARRAY sessions -- date, start_hour, rid
-	LOOP
-		date_slice := m[1]::DATE;
-		hour_slice := m[2]::INTEGER;
-		rid_slice := m[3]::INTEGER;
-		
-		IF (SELECT NOT EXISTS (SELECT rid_slice INTERSECT (SELECT find_rooms(date_slice, hour_slice, course_duration)))) THEN
-			RAISE EXCEPTION 'Room unavailable for this session';
-		END IF;
-		
-		seating_capacity_iter := seating_capacity_iter + (SELECT seating_capacity FROM Rooms R WHERE R.rid = rid_slice);
-		
-		IF (date_slice < start_date_iter) THEN
-			start_date_iter := date_slice;
-		END IF;
-		
-		IF (date_slice > end_date_iter) THEN
-			end_date_iter := date_slice;
-		END IF;
-		
-	END LOOP;
 	
-	IF (reg_deadline <> start_date_iter - 10) THEN
-		RAISE EXCEPTION 'Incorrect start date or registration deadline';
-	END IF;
-	
-	insert into Offerings (launch_date, start_date, end_date, registration_deadline, target_number_registrations, seating_capacity, fees, eid, course_id) 
-		values (launch, start_date_iter, end_date_iter, reg_deadline, seating_capacity_iter, seating_capacity_iter, course_fees, admin_eid, c_id);
+  insert into Offerings (launch_date, start_date, end_date, registration_deadline, target_number_registrations, seating_capacity, fees, eid, course_id) 
+    values (launch, null, null, reg_deadline, target_reg, 0, course_fees, admin_eid, c_id);
 
 	FOREACH m SLICE 1 IN ARRAY sessions -- date, start_hour, rid
 	LOOP
 		date_slice := m[1]::DATE;
 		hour_slice := m[2]::INTEGER;
 		rid_slice := m[3]::INTEGER;  -- Choose instructor with lowest eid
+
+    IF (SELECT NOT EXISTS (SELECT rid_slice INTERSECT (SELECT find_rooms(date_slice, hour_slice, course_duration)))) THEN
+			RAISE EXCEPTION 'Room unavailable for this session';
+		END IF;
 		
 		OPEN curs_FI;
 		chosen = -1;
@@ -339,7 +311,6 @@ BEGIN
 		
 		insert into Sessions (date, end_time, start_time, launch_date, course_id, rid, eid) 
 			values (date_slice, (hour_slice + course_duration), hour_slice, launch, c_id, rid_slice, chosen);
-		-- I am NOT going to enumerate through all possible instructor sorry a bit fked up
 		
 	END LOOP;
 END;
@@ -365,11 +336,11 @@ BEGIN
 	END IF;
 	
 	IF (CURRENT_DATE > sale_start) THEN
-		RAISE EXCEPTION 'Please put a sale start date after today';
+		RAISE NOTICE 'Be careful! Sale start date after today';
 	END IF;
 	
 	IF (CURRENT_DATE > sale_end) THEN
-		RAISE EXCEPTION 'Please put a sale end date after today';
+		RAISE NOTICE 'Be careful! Sale end date after today';
 	END IF;
 	
 	insert into Course_packages (sale_start_date, num_free_registrations, name, sale_end_date, price) 
