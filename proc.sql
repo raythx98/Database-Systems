@@ -1010,7 +1010,7 @@ BEGIN
             -- first work day = join day
             -- last work day = last day of month
             num_work_days := last_day_of_month - EXTRACT(DAY FROM r.join_date) + 1;
-            salary_paid := ((last_day_of_month - EXTRACT(DAY FROM r.join_date) + 1)/last_day_of_month);
+            salary_paid := ((last_day_of_month - EXTRACT(DAY FROM r.join_date) + 1)/last_day_of_month) * add_monthly_rate;
             RETURN NEXT;
 
             INSERT INTO Pay_slips(payment_date, amount, num_work_hours, num_work_days, eid)
