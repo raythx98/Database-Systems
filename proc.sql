@@ -680,26 +680,34 @@ BEGIN
     FROM Registers R
   ) THEN
     RAISE EXCEPTION 'No registed session found';
+  END IF;
+
+  SELECT R.sid into session_id
+  FROM Registers R
+  WHERE R.cust_id = $1
+  AND R.launch_date = $2
+  AND R.course_id = $3;
+
+  SELECT S.date into date_of_session
+  FROM Sessions S
+  WHERE S.sid = session_id
+  AND S.launch_date = $2
+  AND S.course_id = $3;
+
+  SELECT CURRENT_DATE INTO date_of_cancellation;
   
   -- cust redeems a session from package
-  ELSEIF (cust_id, launch_date, course_id) IN (
-    SELECT R.cust_id, R.launch_date, R.course_id
+  IF (cust_id, session_id, launch_date, course_id) IN (
+    SELECT R.cust_id, R.sid, R.launch_date, R.course_id
     FROM Redeems R
   ) THEN
 
-      SELECT R.sid into session_id
-      FROM Redeems R
-      WHERE R.cust_id = $1
-      AND R.launch_date = $2
-      AND R.course_id = $3;
-
-      SELECT S.date into date_of_session
-      FROM Sessions S
-      WHERE S.sid = session_id
-      AND S.launch_date = $2
-      AND S.course_id = $3;
-
-      SELECT CURRENT_DATE INTO date_of_cancellation;
+      IF (cust_id, session_id, launch_date, course_id) IN (
+        SELECT C.cust_id, C.sid, C.launch_date, C.course_id
+        FROM Cancels C
+      ) THEN
+        RAISE EXCEPTION 'Session has already been cancelled!';
+      END IF;
 
       IF date_of_cancellation + 7 <= date_of_session THEN -- credit extra course session
         -- update Cancels table
@@ -717,19 +725,12 @@ BEGIN
   
   -- cust registered for session with money
   ELSE
-      SELECT R.sid into session_id
-      FROM Registers R
-      WHERE R.cust_id = $1
-      AND R.launch_date = $2
-      AND R.course_id = $3;
 
       SELECT S.date into date_of_session
       FROM Sessions S
       WHERE S.sid = session_id
       AND S.launch_date = $2
       AND S.course_id = $3;
-
-      SELECT CURRENT_DATE INTO date_of_cancellation;
 
       SELECT O.fees INTO fees
       FROM Offerings O
