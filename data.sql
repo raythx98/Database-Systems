@@ -741,11 +741,11 @@ insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date
 insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date, course_id) values (3, '2021-04-08', 92.7, NULL, 1, '2021-04-01', 7);
 insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date, course_id) values (4, '2021-04-08', 93.6, NULL, 1, '2021-04-01', 10);
 insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date, course_id) values (5, '2021-04-08', 94.5, NULL, 1, '2021-04-01', 13);
-insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date, course_id) values (16, '2021-04-08', NULL, 0, 2, '2021-04-01', 16);
-insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date, course_id) values (17, '2021-04-08', NULL, 1, 2, '2021-04-01', 19);
-insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date, course_id) values (18, '2021-04-08', NULL, 1, 2, '2021-04-01', 22);
-insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date, course_id) values (19, '2021-04-08', NULL, 1, 2, '2021-04-01', 25);
-insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date, course_id) values (20, '2021-04-08', NULL, 1, 2, '2021-04-01', 28);
+insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date, course_id) values (21, '2021-04-08', NULL, 0, 2, '2021-04-01', 16);
+insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date, course_id) values (22, '2021-04-08', NULL, 1, 2, '2021-04-01', 19);
+insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date, course_id) values (23, '2021-04-08', NULL, 1, 2, '2021-04-01', 22);
+insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date, course_id) values (24, '2021-04-08', NULL, 1, 2, '2021-04-01', 25);
+insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date, course_id) values (25, '2021-04-08', NULL, 1, 2, '2021-04-01', 28);
 
 insert into Pay_slips (payment_date, amount, num_work_hours, num_work_days, eid) values ('2021-03-31', 0, 0, NULL, 1);
 insert into Pay_slips (payment_date, amount, num_work_hours, num_work_days, eid) values ('2021-03-31', 0, 0, NULL, 2);

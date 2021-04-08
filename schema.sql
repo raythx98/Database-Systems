@@ -1147,7 +1147,7 @@ BEGIN
     AND NEW.launch_date = launch_date
     AND NEW.course_id = course_id
   ) THEN
-    RAISE exception 'cannot cancel before registering';
+    RAISE exception 'cannot cancel before registering %', NEW;
     RETURN NULL;
   ELSEIF NEW.package_credit = 1 THEN -- update Buys table
     UPDATE Buys B
