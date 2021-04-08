@@ -147,11 +147,8 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Function 8
--- If session_duration ends after close/rest time return empty
--- filter date
-	-- iterate through room
-		-- iterate through session, find sessions that clash
-		-- if no session clash, add this room to list to return
+-- Example call: 
+-- select * from find_rooms(date'2021-04-13', 9, 3);
 CREATE OR REPLACE FUNCTION find_rooms 
 (input_date DATE, input_start_time INTEGER, input_duration INTEGER)
 RETURNS TABLE(rid INTEGER) AS $$
@@ -180,13 +177,8 @@ END;
 $$ LANGUAGE PLPGSQL;
 
 -- Function 9
--- iterate through DATE
-	-- iterate through rooms
-		-- INT[]
-		-- iterate through 0-23
-		-- If room is available on this hour, append to int[]
-		-- Add tuple to list to return
-		-- select * from get_available_rooms(date'2021-03-02', date'2021-03-05');
+-- Example call: 
+-- select * from get_available_rooms(date'2021-04-22', date'2021-04-28');
 CREATE OR REPLACE FUNCTION get_available_rooms 
 (start_date DATE, end_date DATE)
 RETURNS TABLE(output_rid INTEGER, output_room_capacity INTEGER, 
@@ -247,7 +239,9 @@ END;
 $$ LANGUAGE PLPGSQL;
 
 -- Function 10
--- call add_course_offering(2,100,date'2021-04-06', date'2021-04-06', 90, '{{2021-04-16, 9, 2}}');
+-- Example call: 
+-- call add_course_offering(3, 300, date'2021-04-13', date'2021-04-16', 85, '{{2021-04-26, 9, 2}, {2021-04-27, 9, 3}, {2021-04-28, 9, 4}}');
+-- Session is a 2D array where each nested array contains {<Session date>, <Session start hour>, <Room identifier>}
 CREATE OR REPLACE PROCEDURE add_course_offering 
 (c_id INTEGER, course_fees NUMERIC, launch DATE, 
 reg_deadline DATE, admin_eid INTEGER, sessions varchar[][]) AS $$
@@ -352,6 +346,8 @@ END;
 $$ LANGUAGE PLPGSQL;
 
 -- Function 11
+-- Example call: 
+-- call add_course_package('Almight package', 5, date'2021-05-01', date'2021-05-29', 500);
 CREATE OR REPLACE PROCEDURE add_course_package
 (package_name TEXT, num_free INTEGER, sale_start DATE, sale_end DATE, fee NUMERIC) AS $$
 
@@ -382,6 +378,8 @@ END;
 $$ LANGUAGE PLPGSQL;
 
 -- Function 12
+-- Example call: 
+-- select * from get_available_course_packages();
 CREATE OR REPLACE FUNCTION get_available_course_packages ()
 RETURNS TABLE(package_name TEXT, num_free_sessions INTEGER,
 END_DATE DATE, fee NUMERIC) AS $$
@@ -392,6 +390,8 @@ END_DATE DATE, fee NUMERIC) AS $$
 $$ LANGUAGE SQL;
 
 -- Function 13
+-- Example call: 
+-- call buy_course_package(9, 1);
 CREATE OR REPLACE PROCEDURE buy_course_package
 (input_cust_id INTEGER, input_package_id INTEGER) AS $$
 BEGIN
@@ -1284,6 +1284,8 @@ $$ Language plpgsql;
 
 
 -- Function 30
+-- Example call: 
+-- select * from view_manager_report();
 CREATE OR REPLACE FUNCTION view_manager_report() 
 RETURNS TABLE(manager_name TEXT, course_area_managed INTEGER,
 course_offerings_ended_same_year INTEGER, total_fees NUMERIC,
