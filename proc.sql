@@ -1,3 +1,5 @@
+BEGIN TRANSACTION;
+
 -- Function 1
 -- used array for courseareas
 -- array cant be null for instructor and manager
@@ -1479,3 +1481,5 @@ BEGIN
 		
 END;
 $$ LANGUAGE PLPGSQL;
+
+COMMIT;
