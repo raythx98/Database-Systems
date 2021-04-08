@@ -419,6 +419,16 @@ insert into Customers (name, email, address, phone) values ('Laurena Alf', 'lalf
 insert into Customers (name, email, address, phone) values ('Alie Screas', 'ascreasr@ted.com', '17 Evergreen Street', 90529916);
 insert into Customers (name, email, address, phone) values ('Georgena Drury', 'gdrurys@paginegialle.it', '65109 Dayton Lane', 95538660);
 insert into Customers (name, email, address, phone) values ('Gottfried Mullender', 'gmullendert@elpais.com', '6 Northview Alley', 96049186);
+insert into Customers (name, email, address, phone) values ('Antonella Wanka', 'awanka0@bizjournals.com', '872 Surrey Trail', 95605856);
+insert into Customers (name, email, address, phone) values ('Ashien Zuenelli', 'azuenelli1@economist.com', '5 Esch Street', 90882932);
+insert into Customers (name, email, address, phone) values ('Vassili Freschi', 'vfreschi2@ucoz.com', '90536 Northfield Lane', 96791425);
+insert into Customers (name, email, address, phone) values ('Hermy Arthan', 'harthan3@ihg.com', '896 Mendota Parkway', 99109474);
+insert into Customers (name, email, address, phone) values ('Janella Litchfield', 'jlitchfield4@techcrunch.com', '8 Eagan Circle', 93976414);
+insert into Customers (name, email, address, phone) values ('Addi Hatton', 'ahatton5@dailymail.co.uk', '139 Grasskamp Terrace', 91187628);
+insert into Customers (name, email, address, phone) values ('Dudley Vickors', 'dvickors6@about.com', '84 Center Avenue', 97167709);
+insert into Customers (name, email, address, phone) values ('Suzann Oxley', 'soxley7@webmd.com', '116 Thompson Pass', 93393581);
+insert into Customers (name, email, address, phone) values ('Horatius Sexon', 'hsexon8@huffingtonpost.com', '9948 Hallows Point', 98189842);
+insert into Customers (name, email, address, phone) values ('Rivkah Barthod', 'rbarthod9@cpanel.net', '46 Warner Crossing', 95102021);
 
 insert into Credit_cards (number, cvv, expiry_date, cust_id) values ('3588663117792266', 711, '2023-09-20', 1);
 insert into Credit_cards (number, cvv, expiry_date, cust_id) values ('3582536193499665', 223, '2024-06-13', 2);
@@ -450,6 +460,16 @@ insert into Credit_cards (number, cvv, expiry_date, cust_id) values ('3057259069
 insert into Credit_cards (number, cvv, expiry_date, cust_id) values ('2015089745735288', 827, '2023-10-02', 28);
 insert into Credit_cards (number, cvv, expiry_date, cust_id) values ('6771394585655680', 249, '2023-02-12', 29);
 insert into Credit_cards (number, cvv, expiry_date, cust_id) values ('3571053337048658', 418, '2023-02-18', 30);
+insert into Credit_cards (number, cvv, expiry_date, cust_id) values ('4017957491194401', 520, '2023-02-13', 31);
+insert into Credit_cards (number, cvv, expiry_date, cust_id) values ('4041591939401582', 828, '2023-11-19', 32);
+insert into Credit_cards (number, cvv, expiry_date, cust_id) values ('4041375330940190', 177, '2023-03-09', 33);
+insert into Credit_cards (number, cvv, expiry_date, cust_id) values ('4017951417497044', 724, '2023-05-28', 34);
+insert into Credit_cards (number, cvv, expiry_date, cust_id) values ('4041598398285359', 741, '2023-06-03', 35);
+insert into Credit_cards (number, cvv, expiry_date, cust_id) values ('4728430937693572', 122, '2023-10-23', 36);
+insert into Credit_cards (number, cvv, expiry_date, cust_id) values ('4017954895365311', 896, '2023-07-21', 37);
+insert into Credit_cards (number, cvv, expiry_date, cust_id) values ('4166035824010245', 537, '2023-08-07', 38);
+insert into Credit_cards (number, cvv, expiry_date, cust_id) values ('4041370694014317', 583, '2023-04-13', 39);
+insert into Credit_cards (number, cvv, expiry_date, cust_id) values ('4460704956257952', 212, '2023-01-19', 40);
 
 insert into Owns (number, cust_id, from_date) values ('3588663117792266', 1, '2018-09-20');
 insert into Owns (number, cust_id, from_date) values ('3582536193499665', 2, '2019-06-13');
@@ -481,6 +501,16 @@ insert into Owns (number, cust_id, from_date) values ('3057259069271309', 27, '2
 insert into Owns (number, cust_id, from_date) values ('2015089745735288', 28, '2018-10-02');
 insert into Owns (number, cust_id, from_date) values ('6771394585655680', 29, '2018-02-12');
 insert into Owns (number, cust_id, from_date) values ('3571053337048658', 30, '2018-02-18');
+insert into Owns (number, cust_id, from_date) values ('4017957491194401', 31, '2018-02-13');
+insert into Owns (number, cust_id, from_date) values ('4041591939401582', 32, '2018-11-19');
+insert into Owns (number, cust_id, from_date) values ('4041375330940190', 33, '2019-03-09');
+insert into Owns (number, cust_id, from_date) values ('4017951417497044', 34, '2018-05-28');
+insert into Owns (number, cust_id, from_date) values ('4041598398285359', 35, '2017-06-03');
+insert into Owns (number, cust_id, from_date) values ('4728430937693572', 36, '2018-10-23');
+insert into Owns (number, cust_id, from_date) values ('4017954895365311', 37, '2019-07-21');
+insert into Owns (number, cust_id, from_date) values ('4166035824010245', 38, '2017-08-07');
+insert into Owns (number, cust_id, from_date) values ('4041370694014317', 39, '2018-04-13');
+insert into Owns (number, cust_id, from_date) values ('4460704956257952', 40, '2019-01-19');
 
 insert into Rooms (location, seating_capacity) values ('Brijest', 27);
 insert into Rooms (location, seating_capacity) values ('Pontevedra', 57);
@@ -535,7 +565,16 @@ insert into Course_packages (sale_start_date, num_free_registrations, name, sale
 insert into Course_packages (sale_start_date, num_free_registrations, name, sale_end_date, price) values ('2020-01-01', 8, 'Temp', '2022-01-09', 768.07);
 insert into Course_packages (sale_start_date, num_free_registrations, name, sale_end_date, price) values ('2020-01-01', 1, 'Duobam', '2022-03-19', 351.41);
 
-
+insert into Offerings (launch_date, start_date, end_date, registration_deadline, target_number_registrations, seating_capacity, fees, eid, course_id) values ('2020-04-01', null, null, '2021-04-03', 80, 0, 101, 91, 1);
+insert into Offerings (launch_date, start_date, end_date, registration_deadline, target_number_registrations, seating_capacity, fees, eid, course_id) values ('2020-04-01', null, null, '2021-04-11', 70, 0, 102, 83, 2);
+insert into Offerings (launch_date, start_date, end_date, registration_deadline, target_number_registrations, seating_capacity, fees, eid, course_id) values ('2020-04-01', null, null, '2021-04-13', 70, 0, 103, 94, 3);
+insert into Offerings (launch_date, start_date, end_date, registration_deadline, target_number_registrations, seating_capacity, fees, eid, course_id) values ('2020-04-01', null, null, '2021-04-15', 60, 0, 104, 81, 4);
+insert into Offerings (launch_date, start_date, end_date, registration_deadline, target_number_registrations, seating_capacity, fees, eid, course_id) values ('2020-04-01', null, null, '2021-04-17', 60, 0, 105, 95, 5);
+insert into Offerings (launch_date, start_date, end_date, registration_deadline, target_number_registrations, seating_capacity, fees, eid, course_id) values ('2020-04-01', null, null, '2021-04-03', 60, 0, 106, 87, 6);
+insert into Offerings (launch_date, start_date, end_date, registration_deadline, target_number_registrations, seating_capacity, fees, eid, course_id) values ('2020-04-01', null, null, '2021-04-04', 60, 0, 107, 97, 7);
+insert into Offerings (launch_date, start_date, end_date, registration_deadline, target_number_registrations, seating_capacity, fees, eid, course_id) values ('2020-04-01', null, null, '2021-04-12', 70, 0, 108, 85, 8);
+insert into Offerings (launch_date, start_date, end_date, registration_deadline, target_number_registrations, seating_capacity, fees, eid, course_id) values ('2020-04-01', null, null, '2021-04-14', 70, 0, 109, 99, 9);
+insert into Offerings (launch_date, start_date, end_date, registration_deadline, target_number_registrations, seating_capacity, fees, eid, course_id) values ('2020-04-01', null, null, '2021-04-16', 60, 0, 110, 88, 10);
 insert into Offerings (launch_date, start_date, end_date, registration_deadline, target_number_registrations, seating_capacity, fees, eid, course_id) values ('2021-02-15', null, null, '2021-09-12', 80, 0, 123, 86, 2);
 insert into Offerings (launch_date, start_date, end_date, registration_deadline, target_number_registrations, seating_capacity, fees, eid, course_id) values ('2021-01-01', null, null, '2021-05-31', 40, 0, 176, 85, 3);
 insert into Offerings (launch_date, start_date, end_date, registration_deadline, target_number_registrations, seating_capacity, fees, eid, course_id) values ('2021-02-28', null, null, '2022-02-21', 22, 0, 106, 86, 10);
@@ -587,6 +626,16 @@ insert into Offerings (launch_date, start_date, end_date, registration_deadline,
 insert into Offerings (launch_date, start_date, end_date, registration_deadline, target_number_registrations, seating_capacity, fees, eid, course_id) values ('2021-04-01', null, null, '2021-04-14', 70, 0, 109, 99, 25);
 insert into Offerings (launch_date, start_date, end_date, registration_deadline, target_number_registrations, seating_capacity, fees, eid, course_id) values ('2021-04-01', null, null, '2021-04-16', 60, 0, 110, 88, 28);
 
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2021-09-22', 11, 9, '2020-04-01', 1, 1, 4);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2022-03-02', 12, 11, '2020-04-01', 2, 1, 4);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2022-03-03', 12, 9, '2020-04-01', 3, 1, 4);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2021-12-17', 16, 14, '2020-04-01', 4, 1, 23);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2021-10-10', 18, 15, '2020-04-01', 5, 1, 23);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2021-11-06', 17, 15, '2020-04-01', 6, 1, 23);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2022-02-08', 12, 9, '2020-04-01', 7, 2, 47);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2021-11-23', 18, 17, '2020-04-01', 8, 2, 47);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2021-08-14', 18, 16, '2020-04-01', 9, 2, 47);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2022-03-05', 15, 14, '2020-04-01', 10, 9, 14);
 insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2021-09-22', 10, 9, '2021-02-15', 2, 1, 4);
 insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2022-03-02', 12, 9, '2021-01-01', 3, 1, 12);
 insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2022-03-03', 10, 9, '2021-02-28', 10, 1, 2);
@@ -658,6 +707,22 @@ insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, r
 insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2021-04-27', 18, 17, '2021-04-01', 28, 10, 65);
 insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2021-04-28', 15, 14, '2021-04-01', 28, 1, 65);
 
+insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2020-05-15', 31, '4017957491194401', 1, '2020-04-01', 1);
+insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2020-05-01', 32, '4041591939401582', 1, '2020-04-01', 2);
+insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2020-05-28', 33, '4041375330940190', 1, '2020-04-01', 3);
+insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2020-05-07', 34, '4017951417497044', 1, '2020-04-01', 4);
+insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2020-05-13', 35, '4041598398285359', 1, '2020-04-01', 5);
+insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2020-05-09', 36, '4728430937693572', 1, '2020-04-01', 6);
+insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2020-05-26', 37, '4017954895365311', 1, '2020-04-01', 7);
+insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2020-05-28', 38, '4166035824010245', 1, '2020-04-01', 8);
+insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2020-05-28', 39, '4041370694014317', 1, '2020-04-01', 9);
+insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2020-05-10', 40, '4460704956257952', 1, '2020-04-01', 10);
+insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2021-02-26', 5, '5378621445346923', 1, '2021-01-26', 1);
+insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2021-02-26', 6, '2017821565159001', 1, '2021-01-26', 1);
+insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2021-03-28', 12, '5280546560744122', 1, '2021-02-28', 19);
+insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2021-03-28', 15, '2015380586754361', 1, '2021-02-28', 19);
+insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2021-03-07', 2, '3582536193499665', 1, '2021-02-07', 22);
+insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2021-03-07', 1, '3588663117792266', 1, '2021-02-07', 22);
 insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2021-03-15', 1, '3588663117792266', 1, '2021-02-15', 2);
 insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2021-02-01', 2, '3582536193499665', 1, '2021-01-01', 3);
 insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2021-03-28', 3, '5610712190254483', 1, '2021-02-28', 10);

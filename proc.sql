@@ -146,6 +146,111 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Function 7
+-- eg: select get_available_instructors(1, '2021-01-01', '2021-01-05');
+-- eg: select get_available_instructors(1, '2022-02-08', '2022-02-09');
+CREATE OR REPLACE FUNCTION get_available_instructors(input_course_id INTEGER, input_start_date Date, input_end_date Date) 
+RETURNS TABLE(output_eid INTEGER, output_name TEXT, output_total_teaching_hours_for_month INTEGER, output_date Date, output_avail_hours INTEGER[]) AS $$
+DECLARE
+    curs CURSOR FOR (select i.eid, i.name, i.date, i.end_time, i.start_time, case when total_hours.sum IS NULL then 0 else total_hours.sum end as total_hours from (select temp.eid, temp.name, s.date, s.end_time, s.start_time from (select e.eid, e.name from (select * from instructors 
+    where name = (select name from courses where course_id = input_course_id)) as temp inner join employees e on temp.eid = e.eid) as temp natural left outer join sessions s
+    order by eid) as i natural left outer join  (SELECT eid, SUM(end_time - start_time)
+    FROM (select e.eid, e.name from 
+    (select * from instructors where name = (select name from courses where course_id = input_course_id)) as temp inner join employees e on temp.eid = e.eid) I
+    natural left outer join Sessions S
+    WHERE (SELECT EXTRACT(MONTH FROM S.date)) = (SELECT EXTRACT(MONTH FROM CURRENT_DATE))
+    group by eid) as total_hours
+    order by i.eid, i,date);
+    r RECORD;
+    cur_eid INTEGER;
+    cur_date DATE;
+    curr_hours INTEGER[];
+    cur_depart_date Date;
+    course_duration INTEGER;
+    start_hour INTEGER;
+    end_hour INTEGER;
+BEGIN
+
+    IF (input_start_date > input_end_date) THEN
+        RAISE EXCEPTION 'Input start date cannot be after input end date.';
+    END IF;
+
+    cur_date := input_start_date;
+    select duration into course_duration from courses where course_id = input_course_id;
+
+    OPEN curs;
+    FETCH curs INTO r;
+    cur_eid := 0;
+    
+    LOOP
+        start_hour = 9;
+        end_hour = 18 - course_duration;
+        curr_hours = '{}';
+        
+        select depart_date into cur_depart_date from employees where eid = r.eid;
+
+        IF (cur_eid = r.eid) THEN
+            -- do nothing, skip LOL
+        ELSEIF ((cur_depart_date IS NULL and cur_date != r.date) or (cur_date != r.date and cur_depart_date IS NOT NULL and cur_depart_date <= cur_date)
+        or (cur_depart_date IS NULL and r.date IS NULL) or (r.date IS NULL and cur_depart_date IS NOT NULL and cur_depart_date <= cur_date)) THEN
+            cur_eid := r.eid;
+            output_eid := r.eid;
+            output_name := r.name;
+            output_total_teaching_hours_for_month := r.total_hours;
+            output_date := cur_date;
+            LOOP
+                EXIT WHEN start_hour > end_hour;
+
+                IF (start_hour = 12 or start_hour + course_duration = 13) THEN
+					start_hour := 14;
+				END IF;
+
+                curr_hours := array_append(curr_hours, start_hour);
+                start_hour := start_hour + 1;
+
+            END LOOP;
+            output_avail_hours := curr_hours;
+            RETURN NEXT;
+        ELSEIF ((cur_depart_date IS NULL and cur_date = r.date) or (cur_date = r.date and cur_depart_date IS NOT NULL and cur_depart_date <= cur_date)) THEN
+            cur_eid := r.eid;
+            output_eid := r.eid;
+            output_name := r.name;
+            output_total_teaching_hours_for_month := r.total_hours;
+            output_date := cur_date;
+            LOOP
+                EXIT WHEN start_hour > end_hour;
+                IF (start_hour = 12 or start_hour = 13 or start_hour + course_duration = 13) THEN
+					start_hour := 14;
+                ELSEIF (start_hour = r.start_time) THEN
+                    start_hour := r.end_time + 1; -- need at least one hour break constraint
+                ELSE 
+                    curr_hours := array_append(curr_hours, start_hour);
+                    start_hour := start_hour + 1;
+                END IF;
+            END LOOP;
+            output_avail_hours := curr_hours;
+            RETURN NEXT;
+        END IF;
+
+        IF (cur_date < input_end_date) THEN
+            cur_date := cur_date + integer '1';
+            cur_eid := 0;
+        ELSEIF (cur_date = input_end_date) THEN
+            cur_date := input_start_date;
+
+            LOOP
+                FETCH curs INTO r;
+                EXIT WHEN NOT FOUND;
+                EXIT WHEN cur_eid != r.eid;
+            END LOOP;
+            EXIT WHEN NOT FOUND;
+        END IF;
+
+    END LOOP;
+    CLOSE curs;   
+END;
+$$ LANGUAGE plpgsql;
+
 -- Function 8
 -- Example call: 
 -- select * from find_rooms(date'2021-04-13', 9, 3);
