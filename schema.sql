@@ -324,7 +324,7 @@ BEGIN
         RETURN NULL;
     END IF;
 
-    IF (SELECT EXISTS (SELECT 1 FROM (Redeems natural join Sessions) as RS WHERE (RS.cust_id = NEW.cust_id) and (B.number = NEW.number) and (RS.date >= NEW.buy_date + 7))) THEN
+    IF (SELECT EXISTS (SELECT 1 FROM (Redeems natural join Sessions) as RS WHERE (RS.cust_id = NEW.cust_id) and (RS.number = NEW.number) and (RS.date >= NEW.buy_date + 7))) THEN
         RAISE EXCEPTION 'Customer has an existing partially active package';
         RETURN NULL;
     END IF;
@@ -573,7 +573,7 @@ begin
     from Offerings O
     where O.launch_date = new.launch_date and O.course_id = new.course_id;
 
-    if new.date > offering_reg_deadline - 10  then
+    if new.date > offering_reg_deadline  then
         raise exception 'Can only register for a session 10 days before its registration deadline';
         return null;
     end if;
@@ -652,10 +652,6 @@ begin
         return null;
     
     else
-        update Buys B
-        set num_remaining_redemptions = redemptions_left - 1
-        where B.buy_date = new.buy_date and B.cust_id = new.cust_id and
-        B.number = new.number and B.package_id = new.package_id;
         return new;
     end if;
 
