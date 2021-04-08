@@ -505,6 +505,16 @@ begin
     return null;
     
     end if;
+
+    if exists (
+        select 1
+        from Registers
+        where cust_id = new.cust_id and number = new.number and launch_date = new.launch_date and course_id = new.course_id
+    ) 
+    then raise exception 'Already registered for a session from the same course offering';
+    return null;
+    
+    end if;
         
     return new;
 
