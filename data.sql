@@ -576,7 +576,16 @@ insert into Offerings (launch_date, start_date, end_date, registration_deadline,
 insert into Offerings (launch_date, start_date, end_date, registration_deadline, target_number_registrations, seating_capacity, fees, eid, course_id) values ('2021-01-02', '2022-01-13', '2022-01-13', '2022-01-03', 70, 98, 150, 100, 30);
 insert into Offerings (launch_date, start_date, end_date, registration_deadline, target_number_registrations, seating_capacity, fees, eid, course_id) values ('2021-02-06', '2021-07-14', '2021-07-14', '2021-07-04', 10, 11, 149, 93, 11);
 insert into Offerings (launch_date, start_date, end_date, registration_deadline, target_number_registrations, seating_capacity, fees, eid, course_id) values ('2021-02-13', '2021-08-05', '2022-01-06', '2021-07-26', 60, 174, 54, 82, 12);
-
+insert into Offerings (launch_date, start_date, end_date, registration_deadline, target_number_registrations, seating_capacity, fees, eid, course_id) values ('2021-04-01', '2021-04-13', '2021-04-14', '2021-04-03', 80, 84, 101, 91, 1);
+insert into Offerings (launch_date, start_date, end_date, registration_deadline, target_number_registrations, seating_capacity, fees, eid, course_id) values ('2021-04-01', '2021-04-22', '2021-04-23', '2021-04-12', 70, 79, 102, 83, 4);
+insert into Offerings (launch_date, start_date, end_date, registration_deadline, target_number_registrations, seating_capacity, fees, eid, course_id) values ('2021-04-01', '2021-04-24', '2021-04-25', '2021-04-14', 70, 73, 103, 94, 7);
+insert into Offerings (launch_date, start_date, end_date, registration_deadline, target_number_registrations, seating_capacity, fees, eid, course_id) values ('2021-04-01', '2021-04-26', '2021-04-27', '2021-04-16', 60, 62, 104, 81, 10);
+insert into Offerings (launch_date, start_date, end_date, registration_deadline, target_number_registrations, seating_capacity, fees, eid, course_id) values ('2021-04-01', '2021-04-28', '2021-04-29', '2021-04-18', 60, 98, 105, 95, 13);
+insert into Offerings (launch_date, start_date, end_date, registration_deadline, target_number_registrations, seating_capacity, fees, eid, course_id) values ('2021-04-01', '2021-04-13', '2021-04-30', '2021-04-03', 60, 127, 106, 87, 16);
+insert into Offerings (launch_date, start_date, end_date, registration_deadline, target_number_registrations, seating_capacity, fees, eid, course_id) values ('2021-04-01', '2021-04-14', '2021-04-22', '2021-04-04', 60, 67, 107, 97, 19);
+insert into Offerings (launch_date, start_date, end_date, registration_deadline, target_number_registrations, seating_capacity, fees, eid, course_id) values ('2021-04-01', '2021-04-23', '2021-04-24', '2021-04-13', 70, 73, 108, 85, 22);
+insert into Offerings (launch_date, start_date, end_date, registration_deadline, target_number_registrations, seating_capacity, fees, eid, course_id) values ('2021-04-01', '2021-04-25', '2021-04-26', '2021-04-15', 70, 83, 109, 99, 25);
+insert into Offerings (launch_date, start_date, end_date, registration_deadline, target_number_registrations, seating_capacity, fees, eid, course_id) values ('2021-04-01', '2021-04-27', '2021-04-28', '2021-04-17', 60, 64, 110, 88, 28);
 
 insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2021-09-22', 10, 9, '2021-02-15', 2, 1, 4);
 insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2022-03-02', 12, 9, '2021-01-01', 3, 1, 12);
@@ -628,6 +637,26 @@ insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, r
 insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2021-10-31', 17, 14, '2021-02-09', 17, 8, 57);
 insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2022-02-21', 18, 15, '2021-02-21', 18, 8, 3);
 insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2021-08-02', 17, 14, '2021-02-18', 15, 8, 42);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2021-04-13', 11, 9, '2021-04-01', 1, 1, 4);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2021-04-14', 12, 10, '2021-04-01', 1, 2, 4);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2021-04-22', 11, 9, '2021-04-01', 4, 2, 54);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2021-04-23', 16, 14, '2021-04-01', 4, 3, 54);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2021-04-24', 18, 15, '2021-04-01', 7, 3, 61);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2021-04-25', 18, 15, '2021-04-01', 7, 4, 61);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2021-04-26', 11, 10, '2021-04-01', 10, 4, 64);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2021-04-27', 18, 17, '2021-04-01', 10, 5, 64);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2021-04-28', 18, 15, '2021-04-01', 13, 5, 66);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2021-04-29', 17, 14, '2021-04-01', 13, 6, 66);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2021-04-30', 10, 9, '2021-04-01', 16, 6, 57);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2021-04-13', 10, 9, '2021-04-01', 16, 7, 57);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2021-04-14', 10, 9, '2021-04-01', 19, 7, 67);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2021-04-22', 15, 14, '2021-04-01', 19, 8, 67);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2021-04-23', 18, 15, '2021-04-01', 22, 8, 68);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2021-04-24', 18, 15, '2021-04-01', 22, 9, 68);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2021-04-25', 12, 10, '2021-04-01', 25, 9, 8);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2021-04-26', 18, 16, '2021-04-01', 25, 10, 8);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2021-04-27', 18, 17, '2021-04-01', 28, 10, 65);
+insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2021-04-28', 15, 14, '2021-04-01', 28, 1, 65);
 
 insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2021-03-15', 1, '3588663117792266', 1, '2021-02-15', 2);
 insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2021-02-01', 2, '3582536193499665', 1, '2021-01-01', 3);
