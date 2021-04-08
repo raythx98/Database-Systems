@@ -956,7 +956,7 @@ BEGIN
     
     -- part-time
     ELSEIF r.eid IN (SELECT P.eid FROM Part_time_Emp P) THEN
-      SELECT SUM(end_time - start_time) INTO add_hours_worked
+      SELECT COALESCE(SUM(end_time - start_time), 0) INTO add_hours_worked
       FROM Part_time_Emp P, Sessions S
       WHERE P.eid = S.eid
       AND P.eid = r.eid
@@ -1000,21 +1000,21 @@ BEGIN
             -- first work day = join day
             -- last work day = depart day
             num_work_days := r.depart_date - r.join_date + 1;
-            salary_paid := ((r.depart_date - r.join_date + 1) * add_monthly_rate);
+            salary_paid := ((r.depart_date - r.join_date)/last_day_of_month) * add_monthly_rate;
             RETURN NEXT;
 
             INSERT INTO Pay_slips(payment_date, amount, num_work_hours, num_work_days, eid)
-            VALUES (CURRENT_DATE, (r.depart_date - r.join_date) * add_monthly_rate, NULL, r.depart_date - r.join_date, r.eid);
+            VALUES (CURRENT_DATE, ((r.depart_date - r.join_date)/last_day_of_month) * add_monthly_rate, NULL, r.depart_date - r.join_date, r.eid);
 
           ELSE -- paying for first month of work, not leaving in this month
             -- first work day = join day
             -- last work day = last day of month
             num_work_days := last_day_of_month - EXTRACT(DAY FROM r.join_date) + 1;
-            salary_paid := ((last_day_of_month - EXTRACT(DAY FROM r.join_date) + 1) * add_monthly_rate);
+            salary_paid := ((last_day_of_month - EXTRACT(DAY FROM r.join_date) + 1)/last_day_of_month) * add_monthly_rate;
             RETURN NEXT;
 
             INSERT INTO Pay_slips(payment_date, amount, num_work_hours, num_work_days, eid)
-            VALUES (CURRENT_DATE, (last_day_of_month - EXTRACT(DAY FROM r.join_date) + 1) * add_monthly_rate, NULL, last_day_of_month - EXTRACT(DAY FROM r.join_date) + 1, r.eid);
+            VALUES (CURRENT_DATE, ((last_day_of_month - EXTRACT(DAY FROM r.join_date) + 1)/last_day_of_month) * add_monthly_rate, NULL, last_day_of_month - EXTRACT(DAY FROM r.join_date) + 1, r.eid);
 
           END IF;
 
@@ -1022,22 +1022,22 @@ BEGIN
           -- first work day = 1
           -- last work day = last day of month
           num_work_days := last_day_of_month;
-          salary_paid := (last_day_of_month * add_monthly_rate);
+          salary_paid := add_monthly_rate;
           RETURN NEXT;
 
           INSERT INTO Pay_slips(payment_date, amount, num_work_hours, num_work_days, eid)
-          VALUES (CURRENT_DATE, last_day_of_month * add_monthly_rate, NULL, last_day_of_month, r.eid);
+          VALUES (CURRENT_DATE, add_monthly_rate, NULL, last_day_of_month, r.eid);
 
         ELSE -- paying for last month of work, didn't join this month
           -- first work day = 1
           -- last work day = depart day
           SELECT EXTRACT(DAY FROM r.depart_date) INTO depart_day;
           num_work_days := depart_day; --wrong
-          salary_paid := (depart_day * add_monthly_rate);
+          salary_paid := (r.depart_day/last_day_of_month) * add_monthly_rate;
           RETURN NEXT;
 
           INSERT INTO Pay_slips(payment_date, amount, num_work_hours, num_work_days, eid)
-          VALUES (CURRENT_DATE, r.depart_day * add_monthly_rate, NULL, r.depart_day, r.eid);
+          VALUES (CURRENT_DATE, (r.depart_day/last_day_of_month) * add_monthly_rate, NULL, r.depart_day, r.eid);
         END IF;
 
       ELSEIF (r.depart_date IS NOT NULL) AND payment_date > r.depart_date AND payment_date >= r.join_date AND payment_month = EXTRACT(MONTH FROM r.depart_date) THEN -- pay the last month after departing
@@ -1045,11 +1045,11 @@ BEGIN
         -- last work day = depart day
         SELECT EXTRACT(DAY FROM r.depart_date) INTO depart_day;
         num_work_days := r.depart_day;
-        salary_paid := (r.depart_day * add_monthly_rate);
+        salary_paid := (r.depart_day/last_day_of_month) * add_monthly_rate;
         RETURN NEXT;
 
         INSERT INTO Pay_slips(payment_date, amount, num_work_hours, num_work_days, eid)
-        VALUES (CURRENT_DATE, r.depart_day * add_monthly_rate, NULL, r.depart_day, r.eid);
+        VALUES (CURRENT_DATE, (r.depart_day/last_day_of_month) * add_monthly_rate, NULL, r.depart_day, r.eid);
 
       END IF;
 
