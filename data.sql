@@ -629,17 +629,6 @@ insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, r
 insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2021-02-21', 18, 15, '2020-02-21', 18, 8, 3);
 insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (2, '2020-08-02', 17, 14, '2020-02-18', 15, 8, 42);
 
-insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date, course_id) values (1, '2020-04-15', 110.7, NULL, 1, '2020-02-15', 2);
-insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date, course_id) values (2, '2020-03-01', 158.4, NULL, 1, '2020-01-01', 3);
-insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date, course_id) values (3, '2020-04-28', 95.4, NULL, 1, '2020-02-28', 10);
-insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date, course_id) values (4, '2020-04-07', 143.1, NULL, 1, '2020-02-07', 22);
-insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date, course_id) values (5, '2020-03-13', 142.2, NULL, 1, '2020-01-13', 23);
-insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date, course_id) values (16, '2021-02-07', NULL, 1, 1, '2020-01-01', 3);
-insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date, course_id) values (17, '2021-03-01', NULL, 0, 1, '2020-02-28', 10);
-insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date, course_id) values (18, '2021-03-01', NULL, 0, 1, '2020-02-10', 30);
-insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date, course_id) values (19, '2021-02-05', NULL, 0, 1, '2020-01-26', 1);
-insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date, course_id) values (20, '2021-02-23', NULL, 0, 1, '2020-02-12', 14);
-
 insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2020-03-15', 1, '3588663117792266', 1, '2020-02-15', 2);
 insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2020-02-01', 2, '3582536193499665', 1, '2020-01-01', 3);
 insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2020-03-28', 3, '5610712190254483', 1, '2020-02-28', 10);
@@ -655,21 +644,6 @@ insert into Registers (date, cust_id, number, sid, launch_date, course_id) value
 insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2020-02-28', 13, '4041595701236666', 1, '2020-01-31', 8);
 insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2020-03-29', 14, '3554174477150947', 1, '2020-02-29', 11);
 insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2020-03-29', 15, '2015380586754361', 1, '2020-02-29', 12);
-insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2021-02-07', 16, '5010127125870152', 1, '2020-01-01', 3);
-insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2021-03-01', 17, '5602214926170208', 1, '2020-02-28', 10);
-insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2021-03-01', 18, '4405602960131924', 1, '2020-02-10', 30);
-insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2021-02-05', 19, '3546641420952323', 1, '2020-01-26', 1);
-insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2021-02-23', 20, '5602229441674571', 1, '2020-02-12', 14);
-insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2021-02-10', 21, '4026807077536811', 1, '2020-02-06', 15);
-insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2021-01-08', 22, '3579229414024463', 1, '2020-01-02', 13);
-insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2021-02-10', 23, '5048376949532458', 1, '2020-01-17', 5);
-insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2021-01-11', 24, '3559751806764905', 2, '2020-01-02', 30);
-insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2021-02-23', 25, '3572354523092420', 1, '2020-02-18', 15);
-insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2021-01-24', 26, '6709508673532274', 1, '2020-01-05', 28);
-insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2021-01-10', 27, '3057259069271309', 1, '2020-01-02', 30);
-insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2021-03-01', 28, '2015089745735288', 2, '2020-02-15', 2);
-insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2021-01-22', 29, '6771394585655680', 1, '2020-01-06', 9);
-insert into Registers (date, cust_id, number, sid, launch_date, course_id) values ('2021-02-11', 30, '3571053337048658', 1, '2020-01-28', 10);
 
 insert into Buys (buy_date, num_remaining_redemptions, cust_id, number, package_id) values ('2020-01-01', 3, 16, '5010127125870152', 3);
 insert into Buys (buy_date, num_remaining_redemptions, cust_id, number, package_id) values ('2020-01-01', 2, 17, '5602214926170208', 2);
@@ -687,21 +661,32 @@ insert into Buys (buy_date, num_remaining_redemptions, cust_id, number, package_
 insert into Buys (buy_date, num_remaining_redemptions, cust_id, number, package_id) values ('2020-01-01', 3, 29, '6771394585655680', 3);
 insert into Buys (buy_date, num_remaining_redemptions, cust_id, number, package_id) values ('2020-01-01', 6, 30, '3571053337048658', 8);
 
-insert into Redeems (redeem_date, buy_date, cust_id, number, package_id, sid, launch_date, course_id) values ('2021-02-07', '2020-01-01', 1, '5010127125870152', 3, 2, '2020-01-01', 3);
-insert into Redeems (redeem_date, buy_date, cust_id, number, package_id, sid, launch_date, course_id) values ('2021-03-01', '2020-01-01', 1, '5602214926170208', 2, 3, '2020-02-28', 10);
-insert into Redeems (redeem_date, buy_date, cust_id, number, package_id, sid, launch_date, course_id) values ('2021-03-01', '2020-01-01', 1, '4405602960131924', 8, 10, '2020-02-10', 30);
-insert into Redeems (redeem_date, buy_date, cust_id, number, package_id, sid, launch_date, course_id) values ('2021-02-05', '2020-01-01', 1, '3546641420952323', 3, 7, '2020-01-26', 1);
-insert into Redeems (redeem_date, buy_date, cust_id, number, package_id, sid, launch_date, course_id) values ('2021-02-23', '2020-01-01', 1, '5602229441674571', 3, 18, '2020-02-12', 14);
-insert into Redeems (redeem_date, buy_date, cust_id, number, package_id, sid, launch_date, course_id) values ('2021-02-10', '2020-01-01', 1, '4026807077536811', 9, 21, '2020-02-06', 15);
-insert into Redeems (redeem_date, buy_date, cust_id, number, package_id, sid, launch_date, course_id) values ('2021-01-08', '2020-01-01', 1, '3579229414024463', 1, 16, '2020-01-02', 13);
-insert into Redeems (redeem_date, buy_date, cust_id, number, package_id, sid, launch_date, course_id) values ('2021-02-10', '2020-01-01', 1, '5048376949532458', 9, 19, '2020-01-17', 5);
-insert into Redeems (redeem_date, buy_date, cust_id, number, package_id, sid, launch_date, course_id) values ('2021-01-11', '2020-01-01', 1, '3559751806764905', 1, 44, '2020-01-02', 30);
-insert into Redeems (redeem_date, buy_date, cust_id, number, package_id, sid, launch_date, course_id) values ('2021-02-23', '2020-01-01', 2, '3572354523092420', 2, 33, '2020-02-18', 15);
-insert into Redeems (redeem_date, buy_date, cust_id, number, package_id, sid, launch_date, course_id) values ('2021-01-24', '2020-01-01', 1, '6709508673532274', 5, 35, '2020-01-05', 28);
-insert into Redeems (redeem_date, buy_date, cust_id, number, package_id, sid, launch_date, course_id) values ('2021-01-10', '2020-01-01', 1, '3057259069271309', 5, 38, '2020-01-02', 30);
-insert into Redeems (redeem_date, buy_date, cust_id, number, package_id, sid, launch_date, course_id) values ('2021-03-01', '2020-01-01', 2, '2015089745735288', 9, 41, '2020-02-15', 2);
-insert into Redeems (redeem_date, buy_date, cust_id, number, package_id, sid, launch_date, course_id) values ('2021-01-22', '2020-01-01', 1, '6771394585655680', 3, 12, '2020-01-06', 9);
-insert into Redeems (redeem_date, buy_date, cust_id, number, package_id, sid, launch_date, course_id) values ('2021-02-11', '2020-01-01', 2, '3571053337048658', 8, 34, '2020-01-28', 10);
+insert into Redeems (redeem_date, buy_date, cust_id, number, package_id, sid, launch_date, course_id) values ('2020-02-07', '2020-01-01', 16, '5010127125870152', 3, 1, '2020-01-01', 3);
+insert into Redeems (redeem_date, buy_date, cust_id, number, package_id, sid, launch_date, course_id) values ('2021-02-01', '2020-01-01', 17, '5602214926170208', 2, 1, '2020-02-28', 10);
+insert into Redeems (redeem_date, buy_date, cust_id, number, package_id, sid, launch_date, course_id) values ('2021-02-01', '2020-01-01', 18, '4405602960131924', 8, 1, '2020-02-10', 30);
+insert into Redeems (redeem_date, buy_date, cust_id, number, package_id, sid, launch_date, course_id) values ('2021-01-05', '2020-01-01', 19, '3546641420952323', 3, 1, '2020-01-26', 1);
+insert into Redeems (redeem_date, buy_date, cust_id, number, package_id, sid, launch_date, course_id) values ('2021-02-04', '2020-01-01', 20, '5602229441674571', 3, 1, '2020-02-12', 14);
+insert into Redeems (redeem_date, buy_date, cust_id, number, package_id, sid, launch_date, course_id) values ('2021-01-10', '2020-01-01', 21, '4026807077536811', 9, 1, '2020-02-06', 15);
+insert into Redeems (redeem_date, buy_date, cust_id, number, package_id, sid, launch_date, course_id) values ('2020-12-21', '2020-01-01', 22, '3579229414024463', 1, 1, '2020-01-02', 13);
+insert into Redeems (redeem_date, buy_date, cust_id, number, package_id, sid, launch_date, course_id) values ('2021-01-10', '2020-01-01', 23, '5048376949532458', 9, 1, '2020-01-17', 5);
+insert into Redeems (redeem_date, buy_date, cust_id, number, package_id, sid, launch_date, course_id) values ('2020-11-11', '2020-01-01', 24, '3559751806764905', 1, 1, '2020-01-02', 30);
+insert into Redeems (redeem_date, buy_date, cust_id, number, package_id, sid, launch_date, course_id) values ('2020-06-23', '2020-01-01', 25, '3572354523092420', 2, 2, '2020-02-18', 15);
+insert into Redeems (redeem_date, buy_date, cust_id, number, package_id, sid, launch_date, course_id) values ('2021-01-06', '2020-01-01', 26, '6709508673532274', 5, 1, '2020-01-05', 28);
+insert into Redeems (redeem_date, buy_date, cust_id, number, package_id, sid, launch_date, course_id) values ('2020-12-15', '2020-01-01', 27, '3057259069271309', 5, 1, '2020-01-02', 30);
+insert into Redeems (redeem_date, buy_date, cust_id, number, package_id, sid, launch_date, course_id) values ('2020-09-01', '2020-01-01', 28, '2015089745735288', 9, 2, '2020-02-15', 2);
+insert into Redeems (redeem_date, buy_date, cust_id, number, package_id, sid, launch_date, course_id) values ('2021-01-02', '2020-01-01', 29, '6771394585655680', 3, 1, '2020-01-06', 9);
+insert into Redeems (redeem_date, buy_date, cust_id, number, package_id, sid, launch_date, course_id) values ('2021-01-11', '2020-01-01', 30, '3571053337048658', 8, 1, '2020-01-28', 10);
+
+insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date, course_id) values (1, '2020-04-15', 110.7, NULL, 1, '2020-02-15', 2);
+insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date, course_id) values (2, '2020-03-01', 158.4, NULL, 1, '2020-01-01', 3);
+insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date, course_id) values (3, '2020-04-28', 95.4, NULL, 1, '2020-02-28', 10);
+insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date, course_id) values (4, '2020-04-07', 143.1, NULL, 1, '2020-02-07', 22);
+insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date, course_id) values (5, '2020-03-13', 142.2, NULL, 1, '2020-01-13', 23);
+insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date, course_id) values (16, '2021-02-07', NULL, 1, 1, '2020-01-01', 3);
+insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date, course_id) values (17, '2021-03-01', NULL, 0, 1, '2020-02-28', 10);
+insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date, course_id) values (18, '2021-03-01', NULL, 0, 1, '2020-02-10', 30);
+insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date, course_id) values (19, '2021-02-05', NULL, 0, 1, '2020-01-26', 1);
+insert into Cancels (cust_id, date, refund_amt, package_credit, sid, launch_date, course_id) values (20, '2021-02-23', NULL, 0, 1, '2020-02-12', 14);
 
 insert into Pay_slips (payment_date, amount, num_work_hours, num_work_days, eid) values ('2021-03-31', 80, 4, NULL, 1);
 insert into Pay_slips (payment_date, amount, num_work_hours, num_work_days, eid) values ('2021-03-31', 12, 1, NULL, 2);

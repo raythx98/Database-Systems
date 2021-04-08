@@ -618,8 +618,13 @@ $$
 declare 
     ses_start_date date;
     reg_deadline date;
+    redemptions_left integer;
 
 begin
+    select num_remaining_redemptions into redemptions_left
+    from Buys
+    where cust_id = new.cust_id;
+
     select S.date into ses_start_date 
     from Sessions S 
     where S.sid = new.sid and S.course_id = new.course_id and S.launch_date = new.launch_date;
@@ -657,7 +662,7 @@ execute function check_redeem_date();
 
 CREATE OR REPLACE FUNCTION redeems_trigger_func() RETURNS TRIGGER AS $$ 
 BEGIN
-    IF (NEW.redeem_date > (SELECT date FROM Sessions s WHERE s.sid = NEW.sid)) THEN -- redeem after session
+    IF (NEW.redeem_date > (SELECT date FROM Sessions s WHERE s.sid = NEW.sid AND s.launch_date = NEW.launch_date AND s.course_id = NEW.course_id)) THEN -- redeem after session
         raise exception 'Redeem date is after session date.';
         RETURN NULL; -- dont insert
 
@@ -866,18 +871,18 @@ DECLARE
 BEGIN
   DROP TABLE IF EXISTS StartTimeTable, EndTimeTable;
 
-  CREATE TABLE StartTimeTable AS (
+  CREATE TABLE StartTimeTable AS ( -- all the start times except the current one
     SELECT start_time
     FROM Sessions
     WHERE NEW.rid = rid AND NEW.date = date
-    AND NEW.sid <> sid
+    AND NEW.sid <> sid -- change to launch date and course id and sid
   );
 
   CREATE TABLE EndTimeTable AS (
     SELECT end_time
     FROM Sessions
     WHERE NEW.rid = rid AND NEW.date = date
-    AND NEW.sid <> sid
+    AND NEW.sid <> sid -- change to launch date and course id and sid
   );
 
   -- Instructor must be specialised in the area
@@ -932,7 +937,7 @@ BEGIN
   FROM Sessions S
   WHERE S.eid = NEW.eid
   AND S.date = NEW.date
-  AND NEW.sid <> sid;
+  AND NEW.sid <> sid; -- remove, -1 instead
   
   SELECT COUNT(*) INTO num_sessions_satisfy_constraint -- number of sessions that satisfy constraint
   FROM Sessions S
