@@ -880,6 +880,7 @@ AS $$
 DECLARE
   registration_deadline Date;
   date_of_addition Date;
+  duration_of_session NUMERIC;
 
 BEGIN
   SELECT O.registration_deadline INTO registration_deadline
@@ -888,6 +889,10 @@ BEGIN
   AND S.course_id = O.course_id
   AND S.sid = $3;
 
+  SELECT C.duration INTO duration_of_session
+  FROM Courses C
+  WHERE C.course_id = $2;
+
   SELECT CURRENT_DATE INTO date_of_addition;
 
   IF date_of_addition > registration_deadline THEN
@@ -895,7 +900,7 @@ BEGIN
   ELSE
     -- can add session
     INSERT INTO Sessions(sid, date, end_time, start_time, launch_date, course_id, rid, eid)
-    VALUES ($3, $4, null, $5, $1, $2, $7, $6);
+    VALUES ($3, $4, ($5 + duration_of_session), $5, $1, $2, $7, $6);
   END IF;
 
 END; 

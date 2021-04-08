@@ -126,10 +126,10 @@ CREATE TABLE Offerings (
   course_id INTEGER REFERENCES Courses
     ON DELETE CASCADE,
   PRIMARY KEY(launch_date, course_id),
-  CONSTRAINT CHECK (start_date <= end_date AND launch_date <= start_date) DEFERRABLE INITIALLY DEFERRED,
-  CONSTRAINT CHECK(registration_deadline >= launch_date AND registration_deadline <= end_date) DEFERRABLE INITIALLY DEFERRED,
-  CONSTRAINT CHECK(target_number_registrations <= seating_capacity) DEFERRABLE INITIALLY DEFERRED,
-  CONSTRAINT CHECK(registration_deadline <= start_date - 10) DEFERRABLE INITIALLY DEFERRED
+  CONSTRAINT launch_before_start_check CHECK (launch_date <= start_date),
+  CONSTRAINT deadline_after_launch_check CHECK(registration_deadline >= launch_date),
+  CONSTRAINT deadline_before_end_check CHECK(registration_deadline <= end_date),
+  CONSTRAINT deadline_before_start_check CHECK(registration_deadline <= start_date - 10)
 );
 
 CREATE TABLE Sessions (
@@ -384,25 +384,25 @@ FOR EACH ROW EXECUTE FUNCTION check_for_offerings_insert_deferrable();
 CREATE OR REPLACE FUNCTION check_for_offerings_insert_deferrable() RETURNS TRIGGER AS $$
 BEGIN
 
-    IF (NEW.seating_capacity <> (SELECT COALESCE(SUM(SR.seating_capacity), 0) FROM (Sessions natural join Rooms) as SR WHERE SR.launch_date = NEW.launch_date and SR.course_id = NEW.course_id)) THEN
-        RAISE EXCEPTION 'Seating capacity does not correspond to room capacity of sessions, launch date: %, course id: %', NEW.launch_date, NEW.course_id;
-        RETURN NULL;
-    END IF;
+    -- IF (NEW.seating_capacity <> (SELECT COALESCE(SUM(SR.seating_capacity), 0) FROM (Sessions natural join Rooms) as SR WHERE SR.launch_date = NEW.launch_date and SR.course_id = NEW.course_id)) THEN
+    --     RAISE EXCEPTION 'Seating capacity does not correspond to room capacity of sessions, launch date: %, course id: %', NEW.launch_date, NEW.course_id;
+    --     RETURN NULL;
+    -- END IF;
 
     IF (SELECT NOT EXISTS (SELECT 1 FROM Sessions S WHERE S.launch_date = NEW.launch_date and S.course_id = NEW.course_id)) THEN
         RAISE EXCEPTION 'Offerings should contain at least 1 session';
         RETURN NULL;
     END IF;
 
-    IF (NEW.start_date <> (SELECT COALESCE(min(date), date'1000-01-01') FROM Sessions S WHERE S.launch_date = NEW.launch_date and S.course_id = NEW.course_id)) THEN
-        RAISE EXCEPTION 'Start date does not correspond to earliest session, launch date: %, course id: %', NEW.launch_date, NEW.course_id;
-        RETURN NULL;
-    END IF;
+    -- IF (NEW.start_date <> (SELECT COALESCE(min(date), date'1000-01-01') FROM Sessions S WHERE S.launch_date = NEW.launch_date and S.course_id = NEW.course_id)) THEN
+    --     RAISE EXCEPTION 'Start date does not correspond to earliest session, launch date: %, course id: %', NEW.launch_date, NEW.course_id;
+    --     RETURN NULL;
+    -- END IF;
 
-    IF (NEW.end_date <> (SELECT COALESCE(max(date), date'1000-01-01') FROM Sessions S WHERE S.launch_date = NEW.launch_date and S.course_id = NEW.course_id)) THEN
-        RAISE EXCEPTION 'End date does not correspond to latest session, launch date: %, course id: %', NEW.launch_date, NEW.course_id;
-        RETURN NULL;
-    END IF;
+    -- IF (NEW.end_date <> (SELECT COALESCE(max(date), date'1000-01-01') FROM Sessions S WHERE S.launch_date = NEW.launch_date and S.course_id = NEW.course_id)) THEN
+    --     RAISE EXCEPTION 'End date does not correspond to latest session, launch date: %, course id: %', NEW.launch_date, NEW.course_id;
+    --     RETURN NULL;
+    -- END IF;
 
     RETURN NULL;
 
@@ -874,6 +874,9 @@ DECLARE
   total_hours_taught INTEGER;
   total_sessions INTEGER;
   num_sessions_satisfy_constraint INTEGER;
+  curr_offerings_start_date Date;
+  curr_offerings_end_date Date;
+  curr_offerings_seating_capacity INTEGER;
 BEGIN
   DROP TABLE IF EXISTS StartTimeTable, EndTimeTable;
 
@@ -958,31 +961,29 @@ BEGIN
     RETURN NULL;
   END IF;
 
+  SELECT start_date, end_date, seating_capacity into curr_offerings_start_date, curr_offerings_end_date, curr_offerings_seating_capacity
+  FROM Offerings
+  WHERE launch_date = NEW.launch_date
+  AND course_id = NEW.course_id;
+
   -- Room can only hold one session at any one time.
   IF (NEW.date, NEW.rid) NOT IN ( -- room not occupied on that day
     SELECT date, rid
     FROM Sessions
   ) THEN
-    -- update offerings start date & deadline
-    IF NEW.date < (
-      SELECT start_date
-      FROM Offerings
+    IF curr_offerings_start_date IS NULL THEN
+      UPDATE Offerings
+      SET start_date = NEW.date
       WHERE launch_date = NEW.launch_date
-      AND course_id = NEW.course_id
-    ) THEN
+      AND course_id = NEW.course_id;
+    ELSEIF NEW.date < curr_offerings_start_date THEN
       UPDATE Offerings
       SET start_date = NEW.date, registration_deadline = NEW.date - 10
       WHERE launch_date = NEW.launch_date
       AND course_id = NEW.course_id;
     END IF;
-    
-    -- update offerings end date
-    IF NEW.date > (
-      SELECT end_date
-      FROM Offerings
-      WHERE launch_date = NEW.launch_date
-      AND course_id = NEW.course_id
-    ) THEN
+
+    IF curr_offerings_end_date IS NULL OR NEW.date > curr_offerings_end_date THEN
       UPDATE Offerings
       SET end_date = NEW.date
       WHERE launch_date = NEW.launch_date
@@ -997,34 +998,42 @@ BEGIN
       RETURN NULL;
     ELSE -- room used after this session
       -- update offerings start date
-      IF NEW.date < (
-        SELECT start_date
-        FROM Offerings
+      IF curr_offerings_start_date IS NULL THEN
+        UPDATE Offerings
+        SET start_date = NEW.date
         WHERE launch_date = NEW.launch_date
-        AND course_id = NEW.course_id
-      ) THEN
+        AND course_id = NEW.course_id;
+      ELSEIF NEW.date < curr_offerings_start_date THEN
         UPDATE Offerings
         SET start_date = NEW.date, registration_deadline = NEW.date - 10
         WHERE launch_date = NEW.launch_date
         AND course_id = NEW.course_id;
       END IF;
-      
-      -- update offerings end date
-      IF NEW.date > (
-        SELECT end_date
-        FROM Offerings
-        WHERE launch_date = NEW.launch_date
-        AND course_id = NEW.course_id
-      ) THEN
+
+      IF curr_offerings_end_date IS NULL OR NEW.date > curr_offerings_end_date THEN
         UPDATE Offerings
         SET end_date = NEW.date
         WHERE launch_date = NEW.launch_date
         AND course_id = NEW.course_id;
       END IF;
 
-      RETURN NEW; -- need to change offerings
+      RETURN NEW;
     END IF;
   END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER for_sessions_seating_capacity
+AFTER INSERT OR UPDATE ON Sessions
+FOR EACH ROW EXECUTE FUNCTION check_seating_capacity();
+
+CREATE OR REPLACE FUNCTION check_seating_capacity() RETURNS TRIGGER AS $$
+BEGIN
+  UPDATE Offerings
+  SET seating_capacity = (SELECT COALESCE(SUM(SR.seating_capacity), 0) FROM (Sessions natural join Rooms) as SR WHERE SR.launch_date = NEW.launch_date and SR.course_id = NEW.course_id)
+  WHERE launch_date = NEW.launch_date
+  AND course_id = NEW.course_id;
+  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
