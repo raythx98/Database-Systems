@@ -875,14 +875,14 @@ BEGIN
     SELECT start_time
     FROM Sessions
     WHERE NEW.rid = rid AND NEW.date = date
-    AND NEW.sid <> sid -- change to launch date and course id and sid
+    AND (NEW.sid <> sid AND NEW.launch_date <> launch_date AND NEW.course_id <> course_id)
   );
 
   CREATE TABLE EndTimeTable AS (
     SELECT end_time
     FROM Sessions
     WHERE NEW.rid = rid AND NEW.date = date
-    AND NEW.sid <> sid -- change to launch date and course id and sid
+    AND (NEW.sid <> sid AND NEW.launch_date <> launch_date AND NEW.course_id <> course_id)
   );
 
   -- Instructor must be specialised in the area
@@ -937,13 +937,13 @@ BEGIN
   FROM Sessions S
   WHERE S.eid = NEW.eid
   AND S.date = NEW.date
-  AND NEW.sid <> sid; -- remove, -1 instead
+  AND (NEW.sid <> sid AND NEW.launch_date <> launch_date AND NEW.course_id <> course_id); -- remove, -1 instead
   
   SELECT COUNT(*) INTO num_sessions_satisfy_constraint -- number of sessions that satisfy constraint
   FROM Sessions S
   WHERE S.eid = NEW.eid
   AND S.date = NEW.date
-  AND NEW.sid <> S.sid
+  AND (NEW.sid <> sid AND NEW.launch_date <> launch_date AND NEW.course_id <> course_id)
   AND ((NEW.start_time - 1 >= S.start_time AND NEW.end_time >= S.end_time)
   OR (NEW.start_time <= S.start_time AND NEW.end_time + 1 <= S.end_time));
 
@@ -983,12 +983,6 @@ BEGIN
       AND course_id = NEW.course_id;
     END IF;
 
-    -- update seating capacity
-    UPDATE Offerings
-    SET seating_capacity = seating_capacity + (SELECT seating_capacity FROM Rooms R WHERE R.rid = NEW.rid)
-    WHERE launch_date = NEW.launch_date
-    AND course_id = NEW.course_id;
-
     RETURN NEW;
   ELSE
     IF NOT (NEW.start_time < ALL (SELECT start_time FROM StartTimeTable) AND NEW.end_time < ALL (SELECT start_time FROM StartTimeTable)) OR
@@ -1021,12 +1015,6 @@ BEGIN
         WHERE launch_date = NEW.launch_date
         AND course_id = NEW.course_id;
       END IF;
-
-      -- update seating capacity
-      UPDATE Offerings
-      SET seating_capacity = seating_capacity + (SELECT seating_capacity FROM Rooms R WHERE R.rid = NEW.rid)
-      WHERE launch_date = NEW.launch_date
-      AND course_id = NEW.course_id;
 
       RETURN NEW; -- need to change offerings
     END IF;
@@ -1140,6 +1128,8 @@ BEGIN
     SELECT date
     FROM Sessions
     WHERE NEW.sid = sid
+    AND NEW.launch_date = launch_date
+    AND NEW.course_id = course_id
   ) THEN
     RAISE exception 'cannot cancel after session';
     RETURN NULL;
@@ -1148,6 +1138,8 @@ BEGIN
     FROM Registers
     WHERE NEW.cust_id = cust_id
     AND NEW.sid = sid
+    AND NEW.launch_date = launch_date
+    AND NEW.course_id = course_id
   ) THEN
     RAISE exception 'cannot cancel before registering';
     RETURN NULL;
