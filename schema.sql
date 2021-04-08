@@ -126,10 +126,10 @@ CREATE TABLE Offerings (
   course_id INTEGER REFERENCES Courses
     ON DELETE CASCADE,
   PRIMARY KEY(launch_date, course_id),
-  CONSTRAINT a1 CHECK (start_date <= end_date AND launch_date <= start_date),
-  CONSTRAINT b2 CHECK(registration_deadline >= launch_date AND registration_deadline <= end_date),
-  CONSTRAINT c3 CHECK(target_number_registrations <= seating_capacity),
-  CONSTRAINT d4 CHECK(registration_deadline <= start_date - 10)
+  CONSTRAINT CHECK (start_date <= end_date AND launch_date <= start_date) DEFERRABLE INITIALLY DEFERRED,
+  CONSTRAINT CHECK(registration_deadline >= launch_date AND registration_deadline <= end_date) DEFERRABLE INITIALLY DEFERRED,
+  CONSTRAINT CHECK(target_number_registrations <= seating_capacity) DEFERRABLE INITIALLY DEFERRED,
+  CONSTRAINT CHECK(registration_deadline <= start_date - 10) DEFERRABLE INITIALLY DEFERRED
 );
 
 CREATE TABLE Sessions (
