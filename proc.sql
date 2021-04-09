@@ -509,6 +509,13 @@ as $$
 declare
     input_id integer := cust_id;
 begin
+    if not exists (
+      select 1 
+      from Buys B
+      where input_id = B.cust_id
+    ) then
+    raise exception 'Selected customer with cust_id % has not purchased a course package', input_id;
+    end if;
     return (
         with cte as (
         select *
