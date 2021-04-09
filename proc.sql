@@ -607,6 +607,7 @@ $$ Language plpgsql;
 
 -- Function 16
 -- Get available course sessions
+-- example call : get_available_course_sessions(28, date'2021-04-01');
 create or replace function get_available_course_sessions(input_id in integer, input_date in date)
 returns TABLE(session_date DATE, start_hour integer, instr_name TEXT, remaining_seats integer)
 AS $$
@@ -662,9 +663,8 @@ end;
 $$ Language plpgsql;
 
 -- Function 17
--- register for a session
--- likewise for redeeeming, we must make sure that have an existing
--- package they can use.
+-- Register for a session
+-- example call : register_session(3, date')
 create or replace procedure register_session(cust_id integer, launch_date date, course_id integer, sid integer, payment_method text)
 as $$
 declare
@@ -673,7 +673,26 @@ declare
     package_buy_date date;
     redeem_package_id integer;
     input_id integer := cust_id;
+    input_course_id integer := course_id;
+    input_date date := launch_date;
+    input_sid integer := sid;
 begin
+    if not exists (
+      select 1 
+      from Offerings O 
+      where O.course_id = input_course_id and O.launch_date = input_date
+    ) then
+    raise exception 'Course offering does not exists';
+    end if;
+
+    if not exists (
+      select 1 
+      from Sessions S
+      where S.course_id = input_course_id and S.launch_date = input_date and S.sid = input_sid
+    ) then 
+    raise exception 'Session for course offering does not exists';
+    end if;
+
     select CURRENT_DATE into date_of_transaction;
     if payment_method = 'credit-card' then
     -- if customer wants to register for a session, we must make sure that
