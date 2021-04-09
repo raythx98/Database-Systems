@@ -556,7 +556,7 @@ $$ Language plpgsql;
 
 
 create TRIGGER check_transaction_for_redeem_balance
-before insert 
+before insert or update
 on Redeems
 for each row
 execute function check_redeem_balance();
@@ -590,7 +590,7 @@ $$ Language plpgsql;
 
 
 create TRIGGER check_transaction_for_redeem_date
-before insert 
+before insert or update
 on Redeems
 for each row
 execute function check_redeem_date();
@@ -654,10 +654,6 @@ BEFORE INSERT ON Redeems
 FOR EACH ROW EXECUTE FUNCTION redeems_trigger_func();
 
 
-CREATE TRIGGER for_Pay_slips_trigger
-BEFORE INSERT OR UPDATE ON Pay_slips
-FOR EACH ROW EXECUTE FUNCTION check_for_payslip();
-
 CREATE OR REPLACE FUNCTION check_for_payslip() RETURNS TRIGGER AS $$
 DECLARE
   join_date DATE;
@@ -687,9 +683,10 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER for_Part_time_Emp_trigger
-BEFORE INSERT OR UPDATE ON Part_time_Emp
-FOR EACH ROW EXECUTE FUNCTION check_for_part_time_emp();
+CREATE TRIGGER for_Pay_slips_trigger
+BEFORE INSERT OR UPDATE ON Pay_slips
+FOR EACH ROW EXECUTE FUNCTION check_for_payslip();
+
 
 CREATE OR REPLACE FUNCTION check_for_part_time_emp() RETURNS TRIGGER AS $$
 BEGIN
@@ -705,9 +702,10 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER for_Full_time_Emp_trigger
-BEFORE INSERT OR UPDATE ON Full_time_Emp
-FOR EACH ROW EXECUTE FUNCTION check_for_full_time_emp();
+CREATE TRIGGER for_Part_time_Emp_trigger
+BEFORE INSERT OR UPDATE ON Part_time_Emp
+FOR EACH ROW EXECUTE FUNCTION check_for_part_time_emp();
+
 
 CREATE OR REPLACE FUNCTION check_for_full_time_emp() RETURNS TRIGGER AS $$
 BEGIN
@@ -723,9 +721,10 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER for_Managers_ISA
-BEFORE INSERT OR UPDATE ON Managers
-FOR EACH ROW EXECUTE FUNCTION check_Managers();
+CREATE TRIGGER for_Full_time_Emp_trigger
+BEFORE INSERT OR UPDATE ON Full_time_Emp
+FOR EACH ROW EXECUTE FUNCTION check_for_full_time_emp();
+
 
 CREATE OR REPLACE FUNCTION check_Managers() RETURNS TRIGGER AS $$
 BEGIN
@@ -744,9 +743,10 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER for_Administrators_ISA
-BEFORE INSERT OR UPDATE ON Administrators
-FOR EACH ROW EXECUTE FUNCTION check_Administrators();
+CREATE TRIGGER for_Managers_ISA
+BEFORE INSERT OR UPDATE ON Managers
+FOR EACH ROW EXECUTE FUNCTION check_Managers();
+
 
 CREATE OR REPLACE FUNCTION check_Administrators() RETURNS TRIGGER AS $$
 BEGIN
@@ -765,9 +765,10 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER for_Full_time_instructors
-BEFORE INSERT OR UPDATE ON Full_time_instructors
-FOR EACH ROW EXECUTE FUNCTION check_Full_time_instructors();
+CREATE TRIGGER for_Administrators_ISA
+BEFORE INSERT OR UPDATE ON Administrators
+FOR EACH ROW EXECUTE FUNCTION check_Administrators();
+
 
 CREATE OR REPLACE FUNCTION check_Full_time_instructors() RETURNS TRIGGER AS $$
 BEGIN
@@ -789,9 +790,10 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER for_Part_time_instructors
-BEFORE INSERT OR UPDATE ON Part_time_instructors
-FOR EACH ROW EXECUTE FUNCTION check_Part_time_instructors();
+CREATE TRIGGER for_Full_time_instructors
+BEFORE INSERT OR UPDATE ON Full_time_instructors
+FOR EACH ROW EXECUTE FUNCTION check_Full_time_instructors();
+
 
 CREATE OR REPLACE FUNCTION check_Part_time_instructors() RETURNS TRIGGER AS $$
 BEGIN
@@ -807,9 +809,11 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER for_Owns
-BEFORE INSERT OR UPDATE ON Owns
-FOR EACH ROW EXECUTE FUNCTION check_Owns();
+
+CREATE TRIGGER for_Part_time_instructors
+BEFORE INSERT OR UPDATE ON Part_time_instructors
+FOR EACH ROW EXECUTE FUNCTION check_Part_time_instructors();
+
 
 CREATE OR REPLACE FUNCTION check_Owns() RETURNS TRIGGER AS $$
 BEGIN
@@ -826,13 +830,10 @@ END;
 $$ LANGUAGE plpgsql;
 
 
+CREATE TRIGGER for_Owns
+BEFORE INSERT OR UPDATE ON Owns
+FOR EACH ROW EXECUTE FUNCTION check_Owns();
 
--- amelia
--- drop trigger if exists for_sessions on sessions;
--- session start time and end time and rid cannot overlap i.e. room cannot be used for another session.
-CREATE TRIGGER for_Sessions
-BEFORE INSERT OR UPDATE ON Sessions
-FOR EACH ROW EXECUTE FUNCTION check_Sessions();
 
 CREATE OR REPLACE FUNCTION check_Sessions() RETURNS TRIGGER AS $$
 DECLARE
@@ -988,9 +989,14 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER for_sessions_seating_capacity
-AFTER INSERT OR UPDATE ON Sessions
-FOR EACH ROW EXECUTE FUNCTION check_seating_capacity();
+
+-- amelia
+-- drop trigger if exists for_sessions on sessions;
+-- session start time and end time and rid cannot overlap i.e. room cannot be used for another session.
+CREATE TRIGGER for_Sessions
+BEFORE INSERT OR UPDATE ON Sessions
+FOR EACH ROW EXECUTE FUNCTION check_Sessions();
+
 
 CREATE OR REPLACE FUNCTION check_seating_capacity() RETURNS TRIGGER AS $$
 BEGIN
@@ -1003,10 +1009,10 @@ END;
 $$ LANGUAGE plpgsql;
 
 
--- drop trigger if exists for_session_deletion on sessions;
-CREATE TRIGGER for_session_deletion
-AFTER DELETE ON Sessions
-FOR EACH ROW EXECUTE FUNCTION update_sessions_on_deletion();
+CREATE TRIGGER for_sessions_seating_capacity
+AFTER INSERT OR UPDATE ON Sessions
+FOR EACH ROW EXECUTE FUNCTION check_seating_capacity();
+
 
 CREATE OR REPLACE FUNCTION update_sessions_on_deletion() RETURNS TRIGGER AS $$
 DECLARE
@@ -1098,9 +1104,11 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER for_Cancels
-BEFORE INSERT OR UPDATE ON Cancels
-FOR EACH ROW EXECUTE FUNCTION check_Cancels();
+-- drop trigger if exists for_session_deletion on sessions;
+CREATE TRIGGER for_session_deletion
+AFTER DELETE ON Sessions
+FOR EACH ROW EXECUTE FUNCTION update_sessions_on_deletion();
+
 
 CREATE OR REPLACE FUNCTION check_Cancels() RETURNS TRIGGER AS $$
 BEGIN
@@ -1133,5 +1141,10 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER for_Cancels
+BEFORE INSERT OR UPDATE ON Cancels
+FOR EACH ROW EXECUTE FUNCTION check_Cancels();
 
 COMMIT;

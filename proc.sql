@@ -514,12 +514,20 @@ $$ LANGUAGE PLPGSQL;
 
 -- Function 14
 -- Get course packages
+-- example call : select get_my_course_package(25);
 create or replace function get_my_course_package(cust_id integer)
 returns json
 as $$
 declare
     input_id integer := cust_id;
 begin
+    if not exists (
+      select 1 
+      from Buys B
+      where input_id = B.cust_id
+    ) then
+    raise exception 'Selected customer with cust_id % has not purchased a course package', input_id;
+    end if;
     return (
         with cte as (
         select *
@@ -548,6 +556,7 @@ $$ Language plpgsql;
 
 -- Function 15
 -- Get available course offerings
+-- example call : select get_available_course_offerings();
 create or replace function get_available_course_offerings()
 returns TABLE(course_title TEXT, course_area TEXT, start_date DATE, 
 end_date DATE, reg_deadline DATE, course_fees NUMERIC, remaining_seats INT) 
@@ -566,8 +575,8 @@ declare
             O.launch_date
         from 
             Offerings O join Courses C on (O.course_id = C.course_id)
-        where current_date + 10 < reg_deadline
-        order by reg_deadline, title asc
+        where current_date + 10 <= O.registration_deadline
+        order by reg_deadline, course_title asc
     );
     r record;
 begin
@@ -581,7 +590,17 @@ begin
         end_date := r.final_date;
         reg_deadline := r.reg_deadline;
         course_fees := r.course_fees;
-        remaining_seats := r.seating_capacity - (
+        if (
+            select count(*)
+            from 
+                Sessions S join Rooms Ro on (S.rid = Ro.rid)
+                join Offerings O on (O.course_id = S.course_id and O.launch_date = S.launch_date)
+            group by O.course_id, O.launch_date
+            having O.course_id = r.course_id and O.launch_date = r.launch_date
+        ) >= r.seating_capacity then
+        remaining_seats := 0;
+        else 
+           remaining_seats := r.seating_capacity - (
             select count(*)
             from 
                 Sessions S join Rooms Ro on (S.rid = Ro.rid)
@@ -589,6 +608,8 @@ begin
             group by O.course_id, O.launch_date
             having O.course_id = r.course_id and O.launch_date = r.launch_date
         );
+        end if;
+
         return next;
     end loop;
     close curs;
@@ -597,6 +618,7 @@ $$ Language plpgsql;
 
 -- Function 16
 -- Get available course sessions
+-- example call : get_available_course_sessions(28, date'2021-04-01');
 create or replace function get_available_course_sessions(input_id in integer, input_date in date)
 returns TABLE(session_date DATE, start_hour integer, instr_name TEXT, remaining_seats integer)
 AS $$
@@ -616,7 +638,14 @@ declare
         order by session_date, start_time asc
     );
     r record;
-begin   
+begin
+    if not exists (
+      select 1 
+      from Offerings O 
+      where O.course_id = input_id and O.launch_date = input_date
+    ) then
+    raise exception 'Input course offering does not exists';
+    end if;
     open curs;
     loop
         fetch curs into r;
@@ -624,11 +653,19 @@ begin
         session_date := r.session_date;
         start_hour := r.start_time;
         instr_name := r.instr_name;
-        remaining_seats := r.session_capacity - (
+        if (
+            select count(*)
+            from Registers Re
+            where Re.sid = r.session_id and Re.launch_date = r.offering_launch_date and Re.course_id = r.session_course_id
+        ) >= r.session_capacity then 
+        remaining_seats := 0;
+        else 
+           remaining_seats := r.session_capacity - (
             select count(*)
             from Registers Re
             where Re.sid = r.session_id and Re.launch_date = r.offering_launch_date and Re.course_id = r.session_course_id
         );
+        end if;
         return next;
     end loop;
     close curs;
@@ -637,9 +674,8 @@ end;
 $$ Language plpgsql;
 
 -- Function 17
--- register for a session
--- likewise for redeeeming, we must make sure that have an existing
--- package they can use.
+-- Register for a session
+-- example call : call register_session(3, date'2021-04-01',10,2,'credit-card');
 create or replace procedure register_session(cust_id integer, launch_date date, course_id integer, sid integer, payment_method text)
 as $$
 declare
@@ -648,7 +684,26 @@ declare
     package_buy_date date;
     redeem_package_id integer;
     input_id integer := cust_id;
+    input_course_id integer := course_id;
+    input_date date := launch_date;
+    input_sid integer := sid;
 begin
+    if not exists (
+      select 1 
+      from Offerings O 
+      where O.course_id = input_course_id and O.launch_date = input_date
+    ) then
+    raise exception 'Course offering does not exists';
+    end if;
+
+    if not exists (
+      select 1 
+      from Sessions S
+      where S.course_id = input_course_id and S.launch_date = input_date and S.sid = input_sid
+    ) then 
+    raise exception 'Session for course offering does not exists';
+    end if;
+
     select CURRENT_DATE into date_of_transaction;
     if payment_method = 'credit-card' then
     -- if customer wants to register for a session, we must make sure that
@@ -666,6 +721,7 @@ begin
 
         insert into Registers (date, cust_id, number, sid, launch_date, course_id)
         values (date_of_transaction, cust_id, card_number, sid, launch_date, course_id);
+        raise notice 'Successfully registered for this session';
 
         else 
             raise exception 'Customer has no valid credit cards to make this purchase';
@@ -685,9 +741,8 @@ begin
         where B.cust_id = input_id;
         insert into Redeems (redeem_date, buy_date, cust_id, number, package_id, sid, launch_date, course_id) 
         values (date_of_transaction, package_buy_date, cust_id, card_number, redeem_package_id, sid, launch_date, course_id);
-        insert into Registers (date, cust_id, number, sid, launch_date, course_id)
-        values (date_of_transaction, cust_id, card_number, sid, launch_date, course_id);
-
+        raise notice 'Successfully registered for this session';
+       
         else 
             raise exception 'This customer has no available packages to redeem a sessions from';
         end if;
@@ -700,23 +755,37 @@ $$ Language plpgsql;
 
 
 -- Function 18
--- get my registrations
+-- Get my registrations
+-- example call : get_my_registrations(4);
 create or replace function get_my_registrations(input_id integer)
 returns TABLE(course_name TEXT, course_fees NUMERIC, session_date DATE, 
 start_hour integer, session_duration integer, instr_name TEXT)
 as $$
-    select C.title, O.fees, Ses.date as ses_date, Ses.start_time as start_hour, Ses.end_time - Ses.start_time, I.name
-    from 
+begin 
+    if not exists (
+      select 1 
+      from Registers R 
+      where R.cust_id = input_id
+    ) then
+    raise exception 'Customer has not registered for a session';
+    end if;
+
+    return query (
+      select C.title, O.fees, Ses.date as ses_date, Ses.start_time as start_hour, Ses.end_time - Ses.start_time, I.name
+      from 
         Registers Reg join Sessions Ses on (Reg.sid = Ses.sid and Reg.launch_date = Ses.launch_date and Reg.course_id = Ses.course_id)
         join Offerings O on (O.launch_date = Ses.launch_date and O.course_id = Ses.course_id)
         join Courses C on (C.course_id = Ses.course_id) join Instructors I on (I.eid = Ses.eid)
-    where Reg.cust_id = input_id and current_date < ses.date + ses.end_time
-    order by ses_date, start_hour asc;
-$$ Language SQL; 
+      where Reg.cust_id = input_id and current_date < ses.date + ses.end_time
+      order by ses_date, start_hour asc
+    );
+end;
+$$ Language plpgsql; 
 
 
 -- Function 19
--- update course session
+-- Update course session
+-- example call : call update_course_session(31, 1, date'2020-04-01', 1);
 create or replace procedure update_course_session(cust_id integer, course_id integer, launch_date date, new_session_num integer)
 as $$
 declare 
@@ -744,6 +813,7 @@ begin
         set sid = new_session_num
         where Reg.cust_id = input_cust_id and Reg.course_id = input_course_id
         and Reg.launch_date = input_launch_date;
+        raise notice 'Successfully updated session';
 
     end if;
 end;
@@ -1319,6 +1389,7 @@ $$ LANGUAGE plpgsql;
 
 -- Function 29
 -- view summary report
+-- example call : select view_summary_report(3);
 create or replace function view_summary_report(num_months in integer)
 returns TABLE(month date, total_salary NUMERIC, total_course_package_sales NUMERIC, total_registration_fees NUMERIC, total_refunded_amount NUMERIC,total_session_redemption integer)
 as $$
