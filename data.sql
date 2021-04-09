@@ -225,6 +225,7 @@ insert into Course_areas (name, eid) values ('Home Ing', 78);
 insert into Course_areas (name, eid) values ('SoftWork', 79);
 insert into Course_areas (name, eid) values ('Wrapsafe', 80);
 
+
 insert into Instructors (eid, name) values (1, 'Tempsoft');
 insert into Instructors (eid, name) values (2, 'Viva');
 insert into Instructors (eid, name) values (3, 'Zathin');
@@ -554,6 +555,7 @@ insert into Courses (title, duration, description, name) values ('Streptopelia d
 insert into Courses (title, duration, description, name) values ('Dasyurus viverrinus', 3, 'Organic zero administration concept', 'Wrapsafe');
 insert into Courses (title, duration, description, name) values ('Uraeginthus angolensis', 1, 'Front-line human-resource algorithm', 'Wrapsafe');
 
+
 insert into Course_packages (sale_start_date, num_free_registrations, name, sale_end_date, price) values ('2020-01-01', 10, 'Solarbreeze', '2022-02-01', 732.06);
 insert into Course_packages (sale_start_date, num_free_registrations, name, sale_end_date, price) values ('2020-01-01', 3, 'Prodder', '2022-03-01', 992.63);
 insert into Course_packages (sale_start_date, num_free_registrations, name, sale_end_date, price) values ('2020-01-01', 4, 'Treeflex', '2022-01-06', 398.99);
@@ -625,6 +627,7 @@ insert into Offerings (launch_date, start_date, end_date, registration_deadline,
 insert into Offerings (launch_date, start_date, end_date, registration_deadline, target_number_registrations, seating_capacity, fees, eid, course_id) values ('2021-04-01', null, null, '2021-04-12', 70, 0, 108, 85, 22);
 insert into Offerings (launch_date, start_date, end_date, registration_deadline, target_number_registrations, seating_capacity, fees, eid, course_id) values ('2021-04-01', null, null, '2021-04-14', 70, 0, 109, 99, 25);
 insert into Offerings (launch_date, start_date, end_date, registration_deadline, target_number_registrations, seating_capacity, fees, eid, course_id) values ('2021-04-01', null, null, '2021-04-16', 60, 0, 110, 88, 28);
+
 
 insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2021-09-22', 11, 9, '2020-04-01', 1, 1, 4);
 insert into Sessions (sid, date, end_time, start_time, launch_date, course_id, rid, eid) values (1, '2022-03-02', 12, 11, '2020-04-01', 2, 1, 4);

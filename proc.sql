@@ -503,6 +503,7 @@ $$ LANGUAGE PLPGSQL;
 
 -- Function 14
 -- Get course packages
+-- example call : select get_my_course_package(25);
 create or replace function get_my_course_package(cust_id integer)
 returns json
 as $$
@@ -544,6 +545,7 @@ $$ Language plpgsql;
 
 -- Function 15
 -- Get available course offerings
+-- example call : select get_available_course_offerings();
 create or replace function get_available_course_offerings()
 returns TABLE(course_title TEXT, course_area TEXT, start_date DATE, 
 end_date DATE, reg_deadline DATE, course_fees NUMERIC, remaining_seats INT) 
@@ -562,8 +564,8 @@ declare
             O.launch_date
         from 
             Offerings O join Courses C on (O.course_id = C.course_id)
-        where current_date + 10 < reg_deadline
-        order by reg_deadline, title asc
+        where current_date + 10 <= O.registration_deadline
+        order by reg_deadline, course_title asc
     );
     r record;
 begin
@@ -577,7 +579,17 @@ begin
         end_date := r.final_date;
         reg_deadline := r.reg_deadline;
         course_fees := r.course_fees;
-        remaining_seats := r.seating_capacity - (
+        if (
+            select count(*)
+            from 
+                Sessions S join Rooms Ro on (S.rid = Ro.rid)
+                join Offerings O on (O.course_id = S.course_id and O.launch_date = S.launch_date)
+            group by O.course_id, O.launch_date
+            having O.course_id = r.course_id and O.launch_date = r.launch_date
+        ) >= r.seating_capacity then
+        remaining_seats := 0;
+        else 
+           remaining_seats := r.seating_capacity - (
             select count(*)
             from 
                 Sessions S join Rooms Ro on (S.rid = Ro.rid)
@@ -585,6 +597,8 @@ begin
             group by O.course_id, O.launch_date
             having O.course_id = r.course_id and O.launch_date = r.launch_date
         );
+        end if;
+
         return next;
     end loop;
     close curs;
@@ -612,7 +626,14 @@ declare
         order by session_date, start_time asc
     );
     r record;
-begin   
+begin
+    if not exists (
+      select 1 
+      from Offerings O 
+      where O.course_id = input_id and O.launch_date = input_date
+    ) then
+    raise exception 'Input course offering does not exists';
+    end if;
     open curs;
     loop
         fetch curs into r;
@@ -620,11 +641,19 @@ begin
         session_date := r.session_date;
         start_hour := r.start_time;
         instr_name := r.instr_name;
-        remaining_seats := r.session_capacity - (
+        if (
+            select count(*)
+            from Registers Re
+            where Re.sid = r.session_id and Re.launch_date = r.offering_launch_date and Re.course_id = r.session_course_id
+        ) >= r.session_capacity then 
+        remaining_seats := 0;
+        else 
+           remaining_seats := r.session_capacity - (
             select count(*)
             from Registers Re
             where Re.sid = r.session_id and Re.launch_date = r.offering_launch_date and Re.course_id = r.session_course_id
         );
+        end if;
         return next;
     end loop;
     close curs;
