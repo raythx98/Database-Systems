@@ -674,9 +674,7 @@ begin
         where B.cust_id = input_id;
         insert into Redeems (redeem_date, buy_date, cust_id, number, package_id, sid, launch_date, course_id) 
         values (date_of_transaction, package_buy_date, cust_id, card_number, redeem_package_id, sid, launch_date, course_id);
-        insert into Registers (date, cust_id, number, sid, launch_date, course_id)
-        values (date_of_transaction, cust_id, card_number, sid, launch_date, course_id);
-
+       
         else 
             raise exception 'This customer has no available packages to redeem a sessions from';
         end if;
