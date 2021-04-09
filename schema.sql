@@ -30,7 +30,7 @@ CREATE TABLE Full_time_Emp ( -- 51 to 100
   CHECK (monthly_rate > 0)
 );
 
-CREATE TABLE Managers ( -- 71 to 80
+CREATE TABLE Managers ( -- 71 to 80 and 101
   eid INTEGER PRIMARY KEY,
   FOREIGN KEY(eid) REFERENCES Full_time_Emp
     ON DELETE CASCADE
@@ -75,8 +75,8 @@ CREATE TABLE Customers (
 );
 
 CREATE TABLE Credit_cards (
-  number TEXT PRIMARY KEY,
-  CVV INTEGER NOT NULL,
+  number TEXT PRIMARY KEY CHECK (char_length(number) = 16),
+  CVV INTEGER NOT NULL CHECK (CVV >= 100 and CVV <=999),
   expiry_date Date NOT NULL,
   cust_id INTEGER NOT NULL
     REFERENCES Customers
@@ -84,7 +84,8 @@ CREATE TABLE Credit_cards (
 
 CREATE TABLE Owns (
   cust_id INTEGER REFERENCES Customers,
-  number TEXT REFERENCES Credit_cards,
+  number TEXT REFERENCES Credit_cards
+    ON UPDATE CASCADE,
   from_date Date,
   PRIMARY KEY(cust_id, number)
 );
@@ -172,7 +173,8 @@ CREATE TABLE Registers (
   launch_date Date,
   course_id INTEGER,
   PRIMARY KEY(date, cust_id, number, sid, launch_date, course_id),
-  FOREIGN KEY(cust_id, number) REFERENCES Owns,
+  FOREIGN KEY(cust_id, number) REFERENCES Owns
+    ON UPDATE CASCADE,
   FOREIGN KEY(sid, launch_date, course_id) REFERENCES Sessions,
   CHECK (date >= launch_date)
 );
@@ -185,6 +187,7 @@ CREATE TABLE Buys (
   package_id INTEGER REFERENCES Course_packages,
   PRIMARY KEY(buy_date, cust_id, number, package_id),
   FOREIGN KEY(cust_id, number) REFERENCES Owns
+    ON UPDATE CASCADE
 );
 
 CREATE TABLE Redeems (

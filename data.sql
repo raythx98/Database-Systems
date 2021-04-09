@@ -100,6 +100,7 @@ insert into Employees (name, phone, email, join_date, address, depart_date) valu
 insert into Employees (name, phone, email, join_date, address, depart_date) values ('Delila', '91641682', 'dbould2p@chicagotribune.com', '2020-01-01', '7 Mcbride Way', NULL);
 insert into Employees (name, phone, email, join_date, address, depart_date) values ('Kandace', '94314138', 'kitzcovich2q@opensource.org', '2020-01-01', '2 Derek Avenue', NULL);
 insert into Employees (name, phone, email, join_date, address, depart_date) values ('Julee', '93633261', 'jschuchmacher2r@eventbrite.com', '2020-01-01', '97642 Porter Road', NULL);
+insert into Employees (name, phone, email, join_date, address, depart_date) values ('Kelly','91234567', 'kellykable2@wer.org', '2020-01-01', '8 Fallon Street', NULL);
 
 insert into Part_time_Emp (eid, hourly_rate) values (1, 20);
 insert into Part_time_Emp (eid, hourly_rate) values (2, 12);
@@ -202,6 +203,7 @@ insert into Full_time_Emp (eid, monthly_rate) values (97, 1803);
 insert into Full_time_Emp (eid, monthly_rate) values (98, 6397);
 insert into Full_time_Emp (eid, monthly_rate) values (99, 8984);
 insert into Full_time_Emp (eid, monthly_rate) values (100, 9405);
+insert into Full_time_Emp (eid, monthly_rate) values (101, 7234);
 
 insert into Managers (eid) values (71);
 insert into Managers (eid) values (72);
@@ -213,6 +215,7 @@ insert into Managers (eid) values (77);
 insert into Managers (eid) values (78);
 insert into Managers (eid) values (79);
 insert into Managers (eid) values (80);
+insert into Managers (eid) values (101);
 
 insert into Course_areas (name, eid) values ('Stringtough', 71);
 insert into Course_areas (name, eid) values ('Tempsoft', 72);

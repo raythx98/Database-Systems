@@ -64,6 +64,12 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Function 2
+-- eg select remove_employee(81, '2021-12-31'); -- cant remove, before registration deadline
+-- eg select remove_employee(81, '2023-12-31'); -- can remove, after registration deadline
+-- eg select remove_employee(2, '2021-12-31'); -- cant remove, before session date
+-- eg select remove_employee(2, '2023-12-31'); -- can remove, after session date
+-- eg select remove_employee(71, '2021-12-31'); -- cant remove, never bcus managing an area
+-- eg select remove_employee(101, '2021-12-31'); -- can remove, not managing any area
 CREATE OR REPLACE FUNCTION remove_employee(input_eid INTEGER, input_depart_date Date) RETURNS VOID AS $$
 BEGIN
     IF ((select depart_date from Employees where eid = input_eid) IS NOT NULL) THEN
@@ -73,22 +79,25 @@ BEGIN
             UPDATE Employees 
             SET depart_date = input_depart_date
             WHERE eid = input_eid;
+        ELSE
+          RAISE EXCEPTION 'This employee is a manager that is currently managing an area and cannot be removed.';
         END IF;
-        RAISE EXCEPTION 'This employee is a manager that is currently managing an area and cannot be removed.';
     ELSEIF ((select count(*) from Administrators where eid = input_eid) = 1) THEN -- is an administrator
-        IF ((select count(*) from (select * from Offerings where eid = input_eid and registration_deadline < input_depart_date) as temp) = 0) THEN -- not managing any area
+        IF ((select count(*) from (select * from Offerings where eid = input_eid and registration_deadline > input_depart_date) as temp) = 0) THEN
             UPDATE Employees 
             SET depart_date = input_depart_date
             WHERE eid = input_eid;
+        ELSE
+            RAISE EXCEPTION 'This employee is an administrator that is currently handling a course offering and cannot be removed.';
         END IF;
-        RAISE EXCEPTION 'This employee is an administrator that is currently handling a course offering and cannot be removed.';
     ELSEIF ((select count(*) from Instructors where eid = input_eid) = 1) THEN -- is an instructor
-        IF ((select count(*) from (select date from Sessions where eid = input_eid and date > input_depart_date) as temp) = 0) THEN
+        IF ((select count(*) from (select * from Sessions where eid = input_eid and date > input_depart_date) as temp) = 0) THEN
             UPDATE Employees 
             SET depart_date = input_depart_date
             WHERE eid = input_eid;
+        ELSE
+          RAISE EXCEPTION 'This employee is an instructor that is currently teaching a course session and cannot be removed.';
         END IF;
-        RAISE EXCEPTION 'This employee is an instructor that is currently teaching a course session and cannot be removed.';
     END IF;
 END;
 $$ LANGUAGE plpgsql;
@@ -107,7 +116,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Function 4
--- need to retest after update on cascade command
+-- eg call update_credit_card(40, '1111222233334444', 456, '2023-09-03');
 CREATE OR REPLACE PROCEDURE update_credit_card(input_cust_id INTEGER, input_number TEXT, input_CVV INTEGER, input_expiry_date Date) AS $$
     UPDATE Credit_cards
     SET number = input_number, CVV = input_CVV, expiry_date = input_expiry_date
@@ -115,13 +124,14 @@ CREATE OR REPLACE PROCEDURE update_credit_card(input_cust_id INTEGER, input_numb
 $$ LANGUAGE SQL;
 
 -- Function 5
-CREATE OR REPLACE PROCEDURE add_course(title TEXT, description TEXT, area TEXT, duration NUMERIC) AS $$
-    INSERT INTO Courses (title, duration, description, name) values (title, duration, description, area);
+-- eg call add_course('db systems', 'intro to database', 'Home Ing', 2);
+CREATE OR REPLACE PROCEDURE add_course(input_title TEXT, input_description TEXT, input_area TEXT, input_duration NUMERIC) AS $$
+    INSERT INTO Courses (title, duration, description, name) values (input_title, input_duration, input_description, input_area);
 $$ LANGUAGE SQL;
 
 -- Function 6
 -- eg select find_instructors(7, CURRENT_DATE, 10);
-CREATE OR REPLACE FUNCTION find_instructors(input_course_id INTEGER, session_date Date, input_start_time INTEGER) 
+CREATE OR REPLACE FUNCTION find_instructors(input_course_id INTEGER, input_session_date Date, input_start_time INTEGER) 
 RETURNS TABLE(output_eid INTEGER, output_name TEXT) AS $$
 BEGIN
     -- instructors who can teach
@@ -135,7 +145,7 @@ BEGIN
             select name 
             from courses 
             where courses.course_id = input_course_id
-            )) AND (employees.depart_date IS NULL or session_date <= employees.depart_date)
+            )) AND (employees.depart_date IS NULL or input_session_date <= employees.depart_date)
     except
     -- instructors who cannot teach
     SELECT eid, name
@@ -143,15 +153,15 @@ BEGIN
     WHERE eid in (
         SELECT eid
         FROM Sessions
-        WHERE (Sessions.date = session_date 
+        WHERE (Sessions.date = input_session_date 
       and (input_start_time + (SELECT duration FROM Courses WHERE Courses.course_id = input_course_id)) > Sessions.start_time 
       and input_start_time < Sessions.end_time)));
 END;
 $$ LANGUAGE plpgsql;
 
 -- Function 7
--- eg: select get_available_instructors(1, '2021-01-01', '2021-01-03');
 -- eg: select get_available_instructors(1, '2022-02-08', '2022-02-09');
+-- eg: select get_available_instructors(7, '2021-01-01', '2021-01-03');
 CREATE OR REPLACE FUNCTION get_available_instructors(input_course_id INTEGER, input_start_date Date, input_end_date Date) 
 RETURNS TABLE(output_eid INTEGER, output_name TEXT, output_total_teaching_hours_for_month INTEGER, output_date Date, output_avail_hours INTEGER[]) AS $$
 DECLARE
