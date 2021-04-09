@@ -5,6 +5,9 @@ BEGIN TRANSACTION;
 -- array cant be null for instructor and manager
 -- array must be null for administrators
 -- format of category must be correct
+-- select add_employee('Kassie', '10 Rainbow Road', 90001001, 'kapplekasie@unet.com', 1832, CURRENT_DATE, 'Manager', ARRAY['Database Systems', 'Artificial Intelligence']);
+-- select add_employee('Kassie', '10 Rainbow Road', 90001001, 'kapplekasie@unet.com', 1832, CURRENT_DATE, 'Instructor', ARRAY['Database Systems']);
+-- select add_employee('Kassie', '10 Rainbow Road', 90001001, 'kapplekasie@unet.com', 17, CURRENT_DATE, 'Instructor', ARRAY['Viva']);
 CREATE OR REPLACE FUNCTION add_employee(name TEXT, address TEXT, phone INTEGER, email TEXT, salary NUMERIC, join_date Date, category TEXT, courseareas TEXT ARRAY)
 RETURNS VOID AS $$
 DECLARE
@@ -22,7 +25,7 @@ BEGIN
         id := (SELECT eid FROM Employees ORDER BY eid DESC LIMIT 1);
         INSERT INTO Full_time_Emp (eid, monthly_rate) values (id, salary);
         INSERT INTO Managers (eid) values (id);
-            IF counter < length THEN
+            IF counter <= length THEN
                 LOOP
                     EXIT WHEN counter > length;
                     INSERT INTO Course_areas (name, eid) values (courseareas[counter], id);
@@ -43,7 +46,7 @@ BEGIN
         END IF;
         INSERT INTO Employees (name, phone, email, join_date, address, depart_date) values (name, phone, email, join_date, address, NULL);
         id := (SELECT eid FROM Employees ORDER BY eid DESC LIMIT 1);
-        IF counter < length THEN
+        IF counter <= length THEN
             LOOP
                 EXIT WHEN counter > length;
                 INSERT INTO Instructors (eid, name) values (id, courseareas[counter]);
@@ -103,6 +106,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Function 3
+-- select add_customer('Ben', '93 Dempy Lane', 91234567, 'ben@gmail.com', '1234123456785678', 345, '2023-12-12');
 CREATE OR REPLACE FUNCTION add_customer(input_name TEXT, input_address TEXT, input_phone INTEGER, 
 input_email TEXT, input_number TEXT, input_CVV INTEGER, input_expiry_date Date) RETURNS VOID AS $$
 DECLARE
