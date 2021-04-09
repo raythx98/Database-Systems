@@ -774,7 +774,7 @@ $$ Language plpgsql;
 
 -- Function 19
 -- Update course session
--- example call : 
+-- example call : call update_course_session(31, 1, date'2020-04-01', 1);
 create or replace procedure update_course_session(cust_id integer, course_id integer, launch_date date, new_session_num integer)
 as $$
 declare 
@@ -1378,6 +1378,7 @@ $$ LANGUAGE plpgsql;
 
 -- Function 29
 -- view summary report
+-- example call : select view_summary_report(3);
 create or replace function view_summary_report(num_months in integer)
 returns TABLE(month date, total_salary NUMERIC, total_course_package_sales NUMERIC, total_registration_fees NUMERIC, total_refunded_amount NUMERIC,total_session_redemption integer)
 as $$
