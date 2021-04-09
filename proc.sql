@@ -1,4 +1,9 @@
 BEGIN TRANSACTION;
+DROP FUNCTION IF EXISTS add_employee, remove_employee, add_customer, find_instructors, get_available_instructors, find_rooms, get_available_rooms, get_available_course_packages, 
+get_my_course_package, get_available_course_offerings, get_available_course_sessions, get_my_registrations, pay_salary, promote_courses, top_packages, popular_courses, 
+view_summary_report, view_manager_report;
+DROP PROCEDURE IF EXISTS update_credit_card, add_course, add_course_offering, add_course_package, buy_course_package, register_session, update_course_session, cancel_registration,
+update_instructor, update_room, remove_session, add_session;
 
 -- Function 1
 -- used array for courseareas
@@ -1328,7 +1333,6 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Function 28
--- i cant test this LOL i need more data got a feeling its not very correct
 CREATE OR REPLACE FUNCTION popular_courses() RETURNS 
 TABLE (output_course_id INTEGER, output_title TEXT, output_area TEXT, output_num_offerings INTEGER, output_registration INTEGER) AS $$
 DECLARE
