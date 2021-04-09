@@ -664,7 +664,7 @@ $$ Language plpgsql;
 
 -- Function 17
 -- Register for a session
--- example call : register_session(3, date')
+-- example call : call register_session(3, date'2021-04-01',10,2,'credit-card');
 create or replace procedure register_session(cust_id integer, launch_date date, course_id integer, sid integer, payment_method text)
 as $$
 declare
@@ -710,6 +710,7 @@ begin
 
         insert into Registers (date, cust_id, number, sid, launch_date, course_id)
         values (date_of_transaction, cust_id, card_number, sid, launch_date, course_id);
+        raise notice 'Successfully registered for this session';
 
         else 
             raise exception 'Customer has no valid credit cards to make this purchase';
@@ -729,6 +730,7 @@ begin
         where B.cust_id = input_id;
         insert into Redeems (redeem_date, buy_date, cust_id, number, package_id, sid, launch_date, course_id) 
         values (date_of_transaction, package_buy_date, cust_id, card_number, redeem_package_id, sid, launch_date, course_id);
+        raise notice 'Successfully registered for this session';
        
         else 
             raise exception 'This customer has no available packages to redeem a sessions from';
@@ -742,23 +744,37 @@ $$ Language plpgsql;
 
 
 -- Function 18
--- get my registrations
+-- Get my registrations
+-- example call : get_my_registrations(4);
 create or replace function get_my_registrations(input_id integer)
 returns TABLE(course_name TEXT, course_fees NUMERIC, session_date DATE, 
 start_hour integer, session_duration integer, instr_name TEXT)
 as $$
-    select C.title, O.fees, Ses.date as ses_date, Ses.start_time as start_hour, Ses.end_time - Ses.start_time, I.name
-    from 
+begin 
+    if not exists (
+      select 1 
+      from Registers R 
+      where R.cust_id = input_id
+    ) then
+    raise exception 'Customer has not registered for a session';
+    end if;
+
+    return query (
+      select C.title, O.fees, Ses.date as ses_date, Ses.start_time as start_hour, Ses.end_time - Ses.start_time, I.name
+      from 
         Registers Reg join Sessions Ses on (Reg.sid = Ses.sid and Reg.launch_date = Ses.launch_date and Reg.course_id = Ses.course_id)
         join Offerings O on (O.launch_date = Ses.launch_date and O.course_id = Ses.course_id)
         join Courses C on (C.course_id = Ses.course_id) join Instructors I on (I.eid = Ses.eid)
-    where Reg.cust_id = input_id and current_date < ses.date + ses.end_time
-    order by ses_date, start_hour asc;
-$$ Language SQL; 
+      where Reg.cust_id = input_id and current_date < ses.date + ses.end_time
+      order by ses_date, start_hour asc
+    );
+end;
+$$ Language plpgsql; 
 
 
 -- Function 19
--- update course session
+-- Update course session
+-- example call : 
 create or replace procedure update_course_session(cust_id integer, course_id integer, launch_date date, new_session_num integer)
 as $$
 declare 
@@ -786,6 +802,7 @@ begin
         set sid = new_session_num
         where Reg.cust_id = input_cust_id and Reg.course_id = input_course_id
         and Reg.launch_date = input_launch_date;
+        raise notice 'Successfully updated session';
 
     end if;
 end;

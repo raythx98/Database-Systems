@@ -553,7 +553,7 @@ $$ Language plpgsql;
 
 
 create TRIGGER check_transaction_for_redeem_balance
-before insert 
+before insert or update
 on Redeems
 for each row
 execute function check_redeem_balance();
@@ -587,7 +587,7 @@ $$ Language plpgsql;
 
 
 create TRIGGER check_transaction_for_redeem_date
-before insert 
+before insert or update
 on Redeems
 for each row
 execute function check_redeem_date();
