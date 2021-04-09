@@ -118,11 +118,12 @@ CREATE OR REPLACE PROCEDURE add_course(title TEXT, description TEXT, area TEXT, 
 $$ LANGUAGE SQL;
 
 -- Function 6
+-- eg select find_instructors(7, CURRENT_DATE, 10);
 CREATE OR REPLACE FUNCTION find_instructors(input_course_id INTEGER, session_date Date, input_start_time INTEGER) 
 RETURNS TABLE(output_eid INTEGER, output_name TEXT) AS $$
 BEGIN
     -- instructors who can teach
-  RETURN QUERY
+    RETURN QUERY
     (select eid, name 
     from employees 
     where eid in (
@@ -132,7 +133,7 @@ BEGIN
             select name 
             from courses 
             where courses.course_id = input_course_id
-            )) AND session_date <= employees.depart_date
+            )) AND (employees.depart_date IS NULL or session_date <= employees.depart_date)
     except
     -- instructors who cannot teach
     SELECT eid, name
@@ -141,13 +142,13 @@ BEGIN
         SELECT eid
         FROM Sessions
         WHERE (Sessions.date = session_date 
-      	and (input_start_time + (SELECT duration FROM Courses WHERE Courses.course_id = input_course_id)) > Sessions.start_time 
-      	and input_start_time < Sessions.end_time)));
+      and (input_start_time + (SELECT duration FROM Courses WHERE Courses.course_id = input_course_id)) > Sessions.start_time 
+      and input_start_time < Sessions.end_time)));
 END;
 $$ LANGUAGE plpgsql;
 
 -- Function 7
--- eg: select get_available_instructors(1, '2021-01-01', '2021-01-05');
+-- eg: select get_available_instructors(1, '2021-01-01', '2021-01-03');
 -- eg: select get_available_instructors(1, '2022-02-08', '2022-02-09');
 CREATE OR REPLACE FUNCTION get_available_instructors(input_course_id INTEGER, input_start_date Date, input_end_date Date) 
 RETURNS TABLE(output_eid INTEGER, output_name TEXT, output_total_teaching_hours_for_month INTEGER, output_date Date, output_avail_hours INTEGER[]) AS $$
